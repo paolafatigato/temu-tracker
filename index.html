@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🛍️ Temu Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#ff7701">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <!-- Firebase SDK -->
@@ -269,6 +273,10 @@ tbody tr.da-restituire td .cell, tbody tr.da-restituire td .cell-ro{
 }
 tbody tr.da-restituire .tipo-badge, tbody tr.da-restituire .cat-badge,
 tbody tr.da-restituire .num, tbody tr.da-restituire strong{opacity:.5}
+tbody tr.reso{opacity:.4;background:#efefef}
+tbody tr.reso td .cell, tbody tr.reso td .cell-ro{
+  text-decoration:line-through;color:#999;pointer-events:none
+}
 
 /* ── INFO CARDS (return + cat) ── */
 .info-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
@@ -294,6 +302,14 @@ tbody tr.da-restituire .num, tbody tr.da-restituire strong{opacity:.5}
 .cat-card .ic-lbl{color:var(--teal)}
 .info-card .ic-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:var(--ink)}
 .info-card .ic-sub{font-size:10px;color:var(--ink3);margin-top:3px}
+.info-card .ic-btn{
+  padding:6px 12px;margin-top:8px;font-size:11px;font-weight:600;
+  border:1px solid var(--purple);color:var(--purple);background:white;
+  border-radius:var(--radius);cursor:pointer;transition:all .15s;
+  white-space:nowrap;display:inline-block;text-transform:uppercase;letter-spacing:.5px
+}
+.info-card .ic-btn:hover{background:var(--purple-light);border-color:var(--purple)}
+.info-card .ic-btn:active{transform:scale(.96)}
 .cat-select{
   padding:5px 9px;border:1.5px solid var(--teal);border-radius:var(--radius);
   background:white;font-family:'Sora',sans-serif;font-size:11px;color:var(--ink);
@@ -812,6 +828,7 @@ function renderMain(){
         <div class="ic-lbl">Netto (esclusi resi)</div>
         <div class="ic-val">${eur(totSenzaReso)}</div>
         <div class="ic-sub">${retItems.length ? retItems.length+' art. da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili' : 'Nessun articolo da restituire'}</div>
+        ${retItems.length ? `<button class="ic-btn" onclick="acceptReturns()" title="Accetta e grigia tutti i resi">Accetta resi</button>` : ''}
       </div>
     </div>
     <div class="info-card cat-card">
@@ -880,8 +897,9 @@ function itemRow(it){
   const ec=(field,type,displayVal)=>
     `<td><div class="cell" onclick="inlineEdit(this,'${it.id}','${field}','${type}')" title="Clicca per modificare">${displayVal}</div></td>`;
   const retCls = it.daRestituire ? 'da-restituire' : '';
+  const resoCls = it.reso ? 'reso' : '';
 
-  return`<tr data-id="${it.id}" class="${retCls}">
+  return`<tr data-id="${it.id}" class="${retCls} ${resoCls}">
     <td><div class="cell-ro" style="justify-content:center">
       <input type="checkbox" class="ret-check" ${it.daRestituire?'checked':''}
         onchange="toggleReturn('${it.id}',this.checked)" title="Da restituire">
@@ -1066,6 +1084,14 @@ function toggleReturn(id, checked){
       ?retItems.length+' art. da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili'
       :'Nessun articolo da restituire';
   }
+}
+function acceptReturns(){
+  const mo=S.years[S.currentYear]?.[S.currentMonth];if(!mo)return;
+  const allItems=(mo?.items||[]).filter(i=>i.nome?.trim());
+  const retItems=allItems.filter(i=>i.daRestituire&&!i.reso);
+  if(!retItems.length){toast('Nessun articolo da restituire');return;}
+  if(!confirm(`Contrassegnare ${retItems.length} articoli come "reso"? Verranno visualizzati in grigio.`))return;
+  retItems.forEach(it=>it.reso=true);save();render();toast('Resi accettati ✓');
 }
 function updateComputed(){
   const p=parseFloat(document.getElementById('f-prezzo').value)||0;
