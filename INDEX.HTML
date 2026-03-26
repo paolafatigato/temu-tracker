@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛍️ Temu Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FFF9F2;
+  --surface: #FFFFFF;
+  --primary: #E8521A;
+  --primary-dark: #B33D0F;
+  --secondary: #2C1810;
+  --accent: #F4C842;
+  --neutral: #8B7355;
+  --border: #E8D5C4;
+  --text: #2C1810;
+  --text-light: #9B8678;
+  --utile: #2A9D3A;
+  --sfizio: #D94444;
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(44,24,16,0.09);
+  --shadow-lg: 0 8px 32px rgba(44,24,16,0.15);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── HEADER ── */
+.app-header{
+  background:var(--secondary);color:white;padding:14px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;box-shadow:0 3px 16px rgba(0,0,0,0.25)
+}
+.app-title{font-family:'DM Serif Display',serif;font-size:22px;letter-spacing:-.5px}
+.app-title span{color:var(--accent)}
+.global-stats{display:flex;gap:28px}
+.gstat{text-align:right}
+.gstat .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;opacity:.55}
+.gstat .val{font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
+
+/* ── MONTH TABS ── */
+.months-nav{
+  background:var(--surface);border-bottom:2px solid var(--border);
+  display:flex;align-items:center;overflow-x:auto;padding:0 20px;
+  position:sticky;top:54px;z-index:99;gap:0;scrollbar-width:none
+}
+.months-nav::-webkit-scrollbar{display:none}
+.month-tab{
+  padding:13px 18px;cursor:pointer;font-weight:500;color:var(--text-light);
+  border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;
+  font-size:14px;display:flex;align-items:center;gap:6px;position:relative;user-select:none
+}
+.month-tab:hover{color:var(--primary)}
+.month-tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tab-del{
+  display:none;background:var(--sfizio);color:white;border:none;border-radius:50%;
+  width:15px;height:15px;font-size:9px;line-height:15px;text-align:center;
+  cursor:pointer;flex-shrink:0;align-items:center;justify-content:center
+}
+.month-tab:hover .tab-del{display:flex}
+.add-month-btn{
+  margin-left:auto;flex-shrink:0;padding:7px 15px;background:var(--primary);color:white;
+  border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:600;
+  white-space:nowrap;transition:background .2s
+}
+.add-month-btn:hover{background:var(--primary-dark)}
+
+/* ── MAIN ── */
+.month-content{padding:24px 28px 80px;max-width:1500px;margin:0 auto}
+
+/* ── STATS CARDS ── */
+.month-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:22px}
+.stat-card{
+  background:var(--surface);border-radius:var(--radius);padding:15px 18px;
+  box-shadow:var(--shadow);border-left:4px solid var(--border)
+}
+.stat-card.c-orange{border-left-color:var(--primary)}
+.stat-card.c-green{border-left-color:var(--utile)}
+.stat-card.c-yellow{border-left-color:var(--accent)}
+.stat-card.c-red{border-left-color:var(--sfizio)}
+.stat-card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:var(--text-light);margin-bottom:4px}
+.stat-card .val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--text)}
+.stat-card .sub{font-size:11px;color:var(--text-light);margin-top:2px}
+
+/* ── AVG PANEL ── */
+.avg-panel{
+  background:linear-gradient(135deg,#2C1810 0%,#4A2C1E 100%);
+  color:white;border-radius:var(--radius);padding:18px 24px;margin-bottom:22px
+}
+.avg-panel h3{font-family:'DM Serif Display',serif;font-size:15px;opacity:.75;margin-bottom:14px}
+.avg-grid{display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
+.avg-grid::-webkit-scrollbar{display:none}
+.avg-col{
+  flex-shrink:0;min-width:100px;padding:0 12px;border-right:1px solid rgba(255,255,255,.1);
+  cursor:pointer;transition:background .2s;border-radius:4px
+}
+.avg-col:last-child{border-right:none}
+.avg-col:hover{background:rgba(255,255,255,.07)}
+.avg-col.current-m .avg-val{color:var(--accent)}
+.avg-val{font-family:'DM Mono',monospace;font-size:17px;font-weight:500}
+.avg-lbl{font-size:10px;opacity:.55;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-select,.sort-select{
+  padding:7px 11px;border:1.5px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;
+  color:var(--text);cursor:pointer;transition:border-color .2s
+}
+.filter-select:focus,.sort-select:focus{outline:none;border-color:var(--primary)}
+.btn{
+  padding:8px 16px;border:none;border-radius:var(--radius);cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .2s
+}
+.btn-primary{background:var(--primary);color:white}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:var(--surface);color:var(--text);border:1.5px solid var(--border)}
+.btn-secondary:hover{border-color:var(--primary);color:var(--primary)}
+
+/* ── TABLE ── */
+.table-wrapper{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{
+  background:var(--secondary);color:rgba(255,255,255,.85);padding:11px 13px;
+  text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.9px;
+  font-weight:500;white-space:nowrap
+}
+thead th:first-child{border-radius:8px 0 0 0}
+thead th:last-child{border-radius:0 8px 0 0}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:hover{background:#FFF4EE}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:10px 13px;vertical-align:middle}
+
+/* ── BADGES ── */
+.tipo-badge{
+  display:inline-flex;align-items:center;gap:3px;padding:3px 9px;
+  border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:none;
+  transition:all .2s;font-family:'DM Sans',sans-serif
+}
+.tipo-badge.utile{background:#D8F5DD;color:#1A5C28}
+.tipo-badge.sfizio{background:#FAE0E0;color:#7B1D1D}
+.tipo-badge.nessuno{background:#F0EDE9;color:#9B8678}
+.cat-badge{
+  display:inline-block;padding:2px 9px;border-radius:12px;
+  font-size:11px;font-weight:500;white-space:nowrap
+}
+.num{font-family:'DM Mono',monospace}
+.neg{color:var(--sfizio)}
+.pos{color:var(--utile)}
+.muted{color:var(--text-light)}
+
+/* ── ACTION BTNS ── */
+.action-btn{
+  background:none;border:none;cursor:pointer;padding:4px 5px;
+  border-radius:4px;font-size:15px;transition:all .2s;line-height:1
+}
+.action-btn:hover{background:var(--bg)}
+.action-btn.del:hover{color:var(--sfizio)}
+
+/* ── EMPTY ── */
+.empty-state{text-align:center;padding:56px 24px;color:var(--text-light)}
+.empty-state .ico{font-size:46px;margin-bottom:10px}
+.empty-state h3{font-family:'DM Serif Display',serif;font-size:19px;margin-bottom:6px;color:var(--text)}
+
+/* ── NO MONTH ── */
+.welcome{text-align:center;padding:80px 24px}
+.welcome h2{font-family:'DM Serif Display',serif;font-size:30px;margin-bottom:10px}
+.welcome p{color:var(--text-light);margin-bottom:22px;font-size:15px}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(44,24,16,.52);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .2s
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--surface);border-radius:12px;width:100%;max-width:620px;
+  max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);
+  transform:translateY(18px);transition:transform .2s
+}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{
+  padding:18px 22px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;background:var(--surface);z-index:1
+}
+.modal-title{font-family:'DM Serif Display',serif;font-size:20px}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-light);line-height:1;padding:2px}
+.close-btn:hover{color:var(--text)}
+.modal-body{padding:22px;display:flex;flex-direction:column;gap:18px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-light)}
+.form-group input,.form-group select,.form-group textarea{
+  padding:9px 13px;border:1.5px solid var(--border);border-radius:var(--radius);
+  font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);
+  background:var(--bg);transition:border-color .2s
+}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--primary);background:#fff}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.computed-val{
+  padding:9px 13px;border:1.5px solid var(--border);border-radius:var(--radius);
+  font-family:'DM Mono',monospace;font-size:15px;background:#F8F4F0;color:var(--text-light)
+}
+.tipo-selector{display:flex;gap:10px}
+.tipo-option{
+  flex:1;padding:9px 6px;border:2px solid var(--border);border-radius:var(--radius);
+  text-align:center;cursor:pointer;font-weight:500;transition:all .2s;font-size:13px
+}
+.tipo-option.sel-utile{border-color:var(--utile);background:#D8F5DD;color:#1A5C28}
+.tipo-option.sel-sfizio{border-color:var(--sfizio);background:#FAE0E0;color:#7B1D1D}
+.tipo-option.sel-none{border-color:var(--neutral);background:#F0EDE9;color:var(--neutral)}
+.modal-footer{
+  padding:14px 22px;border-top:1px solid var(--border);
+  display:flex;gap:10px;justify-content:flex-end
+}
+
+/* ── CAT MODAL ── */
+.cat-list{display:flex;flex-direction:column;gap:7px}
+.cat-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 13px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border)
+}
+.cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:22px;right:22px;background:var(--secondary);color:white;
+  padding:11px 18px;border-radius:var(--radius);font-size:13px;z-index:2000;
+  opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--neutral)}
+
+/* ── SEPARATOR ROW ── */
+.sep-row td{background:linear-gradient(to right,var(--bg),transparent);
+  font-size:10px;text-transform:uppercase;letter-spacing:1px;
+  color:var(--text-light);padding:6px 13px;border-bottom:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-title">🛍️ Temu <span>Tracker</span></div>
+  <div class="global-stats" id="global-stats"></div>
+</header>
+
+<nav class="months-nav" id="months-nav"></nav>
+
+<main id="main-content" style="padding:0"></main>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════ ITEM MODAL ═══════════════ -->
+<div class="modal-overlay" id="item-modal-overlay" onclick="handleOvClick(event,'item-modal-overlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Aggiungi articolo</span>
+      <button class="close-btn" onclick="closeItemModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <label>Nome prodotto</label>
+        <input type="text" id="f-nome" placeholder="es. cappellino sole 🧢" autocomplete="off">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prezzo originale (€)</label>
+          <input type="number" step="0.01" min="0" id="f-prezzo" placeholder="0.00" oninput="updateComputed()">
+        </div>
+        <div class="form-group">
+          <label>Motivo sconto</label>
+          <input type="text" id="f-motivo" placeholder="rimborso, reso, sconto, credito…">
+        </div>
+      </div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Sconto 1 (€)</label>
+          <input type="number" step="0.01" min="0" id="f-sc1" placeholder="0.00" oninput="updateComputed()">
+        </div>
+        <div class="form-group">
+          <label>Sconto 2 (€)</label>
+          <input type="number" step="0.01" min="0" id="f-sc2" placeholder="0.00" oninput="updateComputed()">
+        </div>
+        <div class="form-group">
+          <label>Sconto 3 (€)</label>
+          <input type="number" step="0.01" min="0" id="f-sc3" placeholder="0.00" oninput="updateComputed()">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>✅ Totale pagato (calcolato)</label>
+          <div class="computed-val" id="c-totale">€ 0.00</div>
+        </div>
+        <div class="form-group">
+          <label>💰 Risparmio (calcolato)</label>
+          <div class="computed-val" id="c-risparmio">€ 0.00</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prezzo altrove (€)</label>
+          <input type="number" step="0.01" min="0" id="f-altrove" placeholder="default = prezzo originale" oninput="updateComputed()">
+        </div>
+        <div class="form-group">
+          <label>Dove</label>
+          <input type="text" id="f-dove" placeholder="Amazon, Decathlon…">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Tipo</label>
+        <div class="tipo-selector">
+          <div class="tipo-option sel-none" data-tipo="" onclick="selTipo(this)">— Nessuno</div>
+          <div class="tipo-option" data-tipo="utile" onclick="selTipo(this)">✨ Utile</div>
+          <div class="tipo-option" data-tipo="sfizio" onclick="selTipo(this)">🍬 Sfizio</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="f-cat"></select>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeItemModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="saveItem()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ADD MONTH MODAL ═══════════════ -->
+<div class="modal-overlay" id="month-modal-overlay" onclick="handleOvClick(event,'month-modal-overlay')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title">Nuovo mese</span>
+      <button class="close-btn" onclick="closeModal('month-modal-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nome del mese</label>
+        <input type="text" id="f-month-name" placeholder="es. Aprile 2026"
+               onkeydown="if(event.key==='Enter')saveMonth()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('month-modal-overlay')">Annulla</button>
+      <button class="btn btn-primary" onclick="saveMonth()">Crea</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CATEGORIES MODAL ═══════════════ -->
+<div class="modal-overlay" id="cat-modal-overlay" onclick="handleOvClick(event,'cat-modal-overlay')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title">🏷️ Categorie</span>
+      <button class="close-btn" onclick="closeModal('cat-modal-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="cat-list" id="cat-list-modal"></div>
+      <div class="form-group" style="margin-top:6px">
+        <label>Nuova categoria</label>
+        <input type="text" id="f-new-cat" placeholder="es. Cancelleria"
+               onkeydown="if(event.key==='Enter')addCategory()">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="addCategory()">+ Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE & STORAGE
+// ══════════════════════════════════════════
+const KEY = 'temuTracker_v2';
+
+const CAT_COLORS = ['#E8521A','#F4C842','#2A9D3A','#4D96FF','#C77DFF',
+                    '#FF85A1','#00C9A7','#FF6FA6','#6BCB77','#ADB5BD'];
+
+let S = {
+  months: {},
+  categories: ['Casa','Moda','Cancelleria','Regalo','Tech','Hobby','Sport','Cibo','Altro'],
+  currentMonth: null,
+  filterTipo: '',
+  filterCat: '',
+  sortBy: 'order'
+};
+
+function load() {
+  try { const d=localStorage.getItem(KEY); if(d) S={...S,...JSON.parse(d)}; } catch(e){}
+}
+function save() { localStorage.setItem(KEY,JSON.stringify(S)); }
+function uid()  { return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+// ══════════════════════════════════════════
+//  MATH
+// ══════════════════════════════════════════
+function totale(it) {
+  return Math.max(0,(it.prezzo||0)-(it.sc1||0)-(it.sc2||0)-(it.sc3||0));
+}
+function risparmio(it) {
+  const alt = (it.prezzoAltrove!==null&&it.prezzoAltrove!==undefined&&it.prezzoAltrove!=='')
+    ? +it.prezzoAltrove : (it.prezzo||0);
+  return alt - totale(it);
+}
+function eur(n,signed=false) {
+  if(n===null||n===undefined||isNaN(n)) return '—';
+  const s=n.toFixed(2);
+  return (signed&&n>0?'+':'')+'€\u00A0'+s;
+}
+
+// ══════════════════════════════════════════
+//  MONTH STATS
+// ══════════════════════════════════════════
+function mStats(id) {
+  const m=S.months[id]; if(!m) return {};
+  const items=(m.items||[]).filter(i=>i.nome?.trim());
+  const totSpeso=items.reduce((a,i)=>a+totale(i),0);
+  const totRisp=items.reduce((a,i)=>a+risparmio(i),0);
+  const utili=items.filter(i=>i.tipo==='utile');
+  const sfizi=items.filter(i=>i.tipo==='sfizio');
+  return {
+    totSpeso, totRisp, count:items.length,
+    media:items.length?totSpeso/items.length:0,
+    utili:utili.length, sfizi:sfizi.length,
+    spesaUtile:utili.reduce((a,i)=>a+totale(i),0),
+    spesaSfizio:sfizi.reduce((a,i)=>a+totale(i),0)
+  };
+}
+function globalStats() {
+  const ids=Object.keys(S.months);
+  let totS=0,totR=0,totI=0;
+  ids.forEach(id=>{const s=mStats(id);totS+=s.totSpeso||0;totR+=s.totRisp||0;totI+=s.count||0;});
+  return {totS,totR,totI,media:ids.length?totS/ids.length:0,months:ids.length};
+}
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+function render() { renderHeader(); renderTabs(); renderMain(); }
+
+function renderHeader() {
+  const g=globalStats();
+  document.getElementById('global-stats').innerHTML=`
+    <div class="gstat"><div class="lbl">Totale speso</div><div class="val">${eur(g.totS)}</div></div>
+    <div class="gstat"><div class="lbl">Totale risparmiato</div><div class="val">${eur(g.totR)}</div></div>
+    <div class="gstat"><div class="lbl">Media / mese</div><div class="val">${eur(g.media)}</div></div>
+  `;
+}
+
+function renderTabs() {
+  const nav=document.getElementById('months-nav');
+  let html='';
+  Object.entries(S.months).forEach(([id,m])=>{
+    const a=id===S.currentMonth?'active':'';
+    html+=`<div class="month-tab ${a}" onclick="selMonth('${id}')">
+      ${esc(m.name)}
+      <button class="tab-del" onclick="event.stopPropagation();delMonth('${id}')" title="Elimina">✕</button>
+    </div>`;
+  });
+  nav.innerHTML=html+`<button class="add-month-btn" onclick="showMonthModal()">+ Nuovo mese</button>`;
+}
+
+function renderMain() {
+  const main=document.getElementById('main-content');
+  if(!S.currentMonth||!S.months[S.currentMonth]) {
+    main.innerHTML=`<div class="month-content"><div class="welcome">
+      <div style="font-size:60px;margin-bottom:14px">🛍️</div>
+      <h2>Benvenuta nel Temu Tracker!</h2>
+      <p>Crea il tuo primo mese per iniziare a tracciare i tuoi acquisti.</p>
+      <button class="btn btn-primary" onclick="showMonthModal()">+ Aggiungi il primo mese</button>
+    </div></div>`; return;
+  }
+
+  const m=S.months[S.currentMonth];
+  const st=mStats(S.currentMonth);
+  const allItems=(m.items||[]).filter(i=>i.nome?.trim());
+
+  // Filter
+  let items=[...allItems];
+  if(S.filterTipo) items=items.filter(i=>i.tipo===S.filterTipo);
+  if(S.filterCat)  items=items.filter(i=>i.categoria===S.filterCat);
+
+  // Sort
+  if(S.sortBy==='cat')         items.sort((a,b)=>(a.categoria||'').localeCompare(b.categoria||''));
+  else if(S.sortBy==='tipo')   items.sort((a,b)=>(a.tipo||'z').localeCompare(b.tipo||'z'));
+  else if(S.sortBy==='asc')    items.sort((a,b)=>totale(a)-totale(b));
+  else if(S.sortBy==='desc')   items.sort((a,b)=>totale(b)-totale(a));
+  else if(S.sortBy==='risp')   items.sort((a,b)=>risparmio(b)-risparmio(a));
+
+  // Monthly avg panel
+  const allM=Object.entries(S.months);
+  const avgHTML=allM.length>1?`
+    <div class="avg-panel">
+      <h3>📊 Confronto mensile — clicca su un mese per navigare</h3>
+      <div class="avg-grid">
+        ${allM.map(([id,mm])=>{
+          const s=mStats(id);
+          const cur=id===S.currentMonth?'current-m':'';
+          return `<div class="avg-col ${cur}" onclick="selMonth('${id}')">
+            <div class="avg-val">${eur(s.totSpeso)}</div>
+            <div class="avg-lbl">${esc(mm.name)}</div>
+            <div style="font-size:10px;opacity:.5;margin-top:2px">${s.count} art.</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  // Table
+  let tableHTML='';
+  if(items.length===0) {
+    tableHTML=`<div class="empty-state">
+      <div class="ico">${allItems.length>0?'🔍':'📦'}</div>
+      <h3>${allItems.length>0?'Nessun risultato con i filtri attivi':'Nessun articolo ancora'}</h3>
+      <p style="font-size:13px">${allItems.length>0?'Prova a cambiare i filtri.':'Clicca "+ Articolo" per iniziare!'}</p>
+    </div>`;
+  } else {
+    // Group by category if sort=cat
+    let rows='';
+    if(S.sortBy==='cat') {
+      const cats=[...new Set(items.map(i=>i.categoria||''))];
+      cats.forEach(cat=>{
+        const group=items.filter(i=>(i.categoria||'')===cat);
+        if(group.length) {
+          rows+=`<tr class="sep-row"><td colspan="13">${cat||'Senza categoria'} (${group.length})</td></tr>`;
+          rows+=group.map(i=>itemRow(i)).join('');
+        }
+      });
+    } else {
+      rows=items.map(i=>itemRow(i)).join('');
+    }
+    tableHTML=`<table>
+      <thead><tr>
+        <th>Tipo</th><th>Categoria</th><th>Prodotto</th>
+        <th>Prezzo</th><th>Sc.1</th><th>Sc.2</th><th>Sc.3</th>
+        <th>Motivo</th><th>Totale pag.</th>
+        <th>P. altrove</th><th>Dove</th><th>Risparmio</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  main.innerHTML=`<div class="month-content">
+    ${avgHTML}
+
+    <div class="month-stats">
+      <div class="stat-card c-orange">
+        <div class="lbl">💸 Totale speso</div>
+        <div class="val">${eur(st.totSpeso)}</div>
+        <div class="sub">${st.count} articoli</div>
+      </div>
+      <div class="stat-card c-green">
+        <div class="lbl">💰 Risparmio totale</div>
+        <div class="val">${eur(st.totRisp)}</div>
+      </div>
+      <div class="stat-card c-yellow">
+        <div class="lbl">📦 Media per articolo</div>
+        <div class="val">${eur(st.media)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">✨ Utili</div>
+        <div class="val">${st.utili}</div>
+        <div class="sub">${eur(st.spesaUtile)}</div>
+      </div>
+      <div class="stat-card c-red">
+        <div class="lbl">🍬 Sfizi</div>
+        <div class="val">${st.sfizi}</div>
+        <div class="sub">${eur(st.spesaSfizio)}</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="showAddItem()">+ Articolo</button>
+      <select class="filter-select" onchange="S.filterTipo=this.value;renderMain()">
+        <option value="" ${!S.filterTipo?'selected':''}>Tutti i tipi</option>
+        <option value="utile"  ${S.filterTipo==='utile'?'selected':''}>✨ Solo utili</option>
+        <option value="sfizio" ${S.filterTipo==='sfizio'?'selected':''}>🍬 Solo sfizi</option>
+      </select>
+      <select class="filter-select" onchange="S.filterCat=this.value;renderMain()">
+        <option value="">Tutte le categorie</option>
+        ${S.categories.map(c=>`<option value="${c}" ${S.filterCat===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <select class="sort-select" onchange="S.sortBy=this.value;renderMain()">
+        <option value="order" ${S.sortBy==='order'?'selected':''}>Ordine inserimento</option>
+        <option value="cat"   ${S.sortBy==='cat'?'selected':''}>Per categoria</option>
+        <option value="tipo"  ${S.sortBy==='tipo'?'selected':''}>Per tipo</option>
+        <option value="desc"  ${S.sortBy==='desc'?'selected':''}>Prezzo ↓</option>
+        <option value="asc"   ${S.sortBy==='asc'?'selected':''}>Prezzo ↑</option>
+        <option value="risp"  ${S.sortBy==='risp'?'selected':''}>Risparmio ↓</option>
+      </select>
+      <button class="btn btn-secondary" onclick="showCatModal()" style="margin-left:auto">🏷️ Categorie</button>
+    </div>
+
+    <div class="table-wrapper">${tableHTML}</div>
+  </div>`;
+}
+
+function itemRow(it) {
+  const tot=totale(it);
+  const risp=risparmio(it);
+  const altVal=(it.prezzoAltrove!==null&&it.prezzoAltrove!==undefined&&it.prezzoAltrove!=='')
+    ? +it.prezzoAltrove : null;
+
+  const tipoBadge=it.tipo==='utile'
+    ?`<button class="tipo-badge utile" onclick="toggleTipo('${it.id}')">✨ Utile</button>`
+    :it.tipo==='sfizio'
+    ?`<button class="tipo-badge sfizio" onclick="toggleTipo('${it.id}')">🍬 Sfizio</button>`
+    :`<button class="tipo-badge nessuno" onclick="toggleTipo('${it.id}')">—</button>`;
+
+  const ci=S.categories.indexOf(it.categoria||'');
+  const cc=CAT_COLORS[ci>=0?ci%CAT_COLORS.length:9];
+  const catBadge=it.categoria
+    ?`<span class="cat-badge" style="background:${cc}20;color:${cc};border:1px solid ${cc}44">${esc(it.categoria)}</span>`
+    :`<span class="muted" style="font-size:11px">—</span>`;
+
+  const sc=v=>v?`<span class="num neg">-${eur(v)}</span>`:'<span class="muted">—</span>';
+
+  const rispDisplay=risp!==0?`<span class="num ${risp>=0?'pos':'neg'}">${eur(risp)}</span>`:'<span class="muted">—</span>';
+
+  return `<tr>
+    <td>${tipoBadge}</td>
+    <td>${catBadge}</td>
+    <td><strong>${esc(it.nome)}</strong></td>
+    <td class="num">${eur(it.prezzo||0)}</td>
+    <td>${sc(it.sc1)}</td>
+    <td>${sc(it.sc2)}</td>
+    <td>${sc(it.sc3)}</td>
+    <td style="font-size:11px;color:var(--text-light)">${esc(it.motivo||'')}</td>
+    <td><strong class="num">${eur(tot)}</strong></td>
+    <td class="num">${altVal!==null?eur(altVal):'<span class="muted">—</span>'}</td>
+    <td style="font-size:11px;color:var(--text-light)">${esc(it.dove||'')}</td>
+    <td>${rispDisplay}</td>
+    <td style="white-space:nowrap">
+      <button class="action-btn" onclick="editItem('${it.id}')" title="Modifica">✏️</button>
+      <button class="action-btn del" onclick="delItem('${it.id}')" title="Elimina">🗑️</button>
+    </td>
+  </tr>`;
+}
+
+function esc(s) {
+  if(!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ══════════════════════════════════════════
+//  ITEM MODAL
+// ══════════════════════════════════════════
+let editId=null;
+
+function showAddItem() {
+  editId=null;
+  document.getElementById('modal-title').textContent='Aggiungi articolo';
+  document.getElementById('f-nome').value='';
+  document.getElementById('f-prezzo').value='';
+  document.getElementById('f-sc1').value='';
+  document.getElementById('f-sc2').value='';
+  document.getElementById('f-sc3').value='';
+  document.getElementById('f-motivo').value='';
+  document.getElementById('f-altrove').value='';
+  document.getElementById('f-dove').value='';
+  fillCatSel('');
+  selTipo(document.querySelector('[data-tipo=""]'));
+  updateComputed();
+  openModal('item-modal-overlay');
+  setTimeout(()=>document.getElementById('f-nome').focus(),120);
+}
+
+function editItem(id) {
+  const it=(S.months[S.currentMonth].items||[]).find(i=>i.id===id);
+  if(!it) return;
+  editId=id;
+  document.getElementById('modal-title').textContent='Modifica articolo';
+  document.getElementById('f-nome').value=it.nome||'';
+  document.getElementById('f-prezzo').value=it.prezzo||'';
+  document.getElementById('f-sc1').value=it.sc1||'';
+  document.getElementById('f-sc2').value=it.sc2||'';
+  document.getElementById('f-sc3').value=it.sc3||'';
+  document.getElementById('f-motivo').value=it.motivo||'';
+  document.getElementById('f-altrove').value=it.prezzoAltrove!==null&&it.prezzoAltrove!==undefined?it.prezzoAltrove:'';
+  document.getElementById('f-dove').value=it.dove||'';
+  fillCatSel(it.categoria||'');
+  const tipoEl=document.querySelector(`[data-tipo="${it.tipo||''}"]`);
+  if(tipoEl) selTipo(tipoEl);
+  updateComputed();
+  openModal('item-modal-overlay');
+}
+
+function saveItem() {
+  const nome=document.getElementById('f-nome').value.trim();
+  if(!nome){toast('Inserisci il nome del prodotto ⚠️');return;}
+  const prezzo=parseFloat(document.getElementById('f-prezzo').value)||0;
+  const sc1=parseFloat(document.getElementById('f-sc1').value)||0;
+  const sc2=parseFloat(document.getElementById('f-sc2').value)||0;
+  const sc3=parseFloat(document.getElementById('f-sc3').value)||0;
+  const motivo=document.getElementById('f-motivo').value.trim();
+  const altVal=document.getElementById('f-altrove').value;
+  const prezzoAltrove=altVal!==''?parseFloat(altVal):null;
+  const dove=document.getElementById('f-dove').value.trim();
+  const tipo=document.querySelector('.tipo-option.sel-utile')?'utile'
+    :document.querySelector('.tipo-option.sel-sfizio')?'sfizio':'';
+  const categoria=document.getElementById('f-cat').value;
+
+  const items=S.months[S.currentMonth].items||[];
+  if(editId) {
+    const idx=items.findIndex(i=>i.id===editId);
+    if(idx>=0) items[idx]={...items[idx],nome,prezzo,sc1,sc2,sc3,motivo,prezzoAltrove,dove,tipo,categoria};
+  } else {
+    items.push({id:uid(),nome,prezzo,sc1,sc2,sc3,motivo,prezzoAltrove,dove,tipo,categoria});
+  }
+  S.months[S.currentMonth].items=items;
+  save(); closeItemModal(); render();
+  toast(editId?'Articolo aggiornato ✓':'Articolo aggiunto ✓');
+}
+
+function delItem(id) {
+  if(!confirm('Eliminare questo articolo?')) return;
+  S.months[S.currentMonth].items=(S.months[S.currentMonth].items||[]).filter(i=>i.id!==id);
+  save(); render(); toast('Articolo eliminato');
+}
+
+function toggleTipo(id) {
+  const it=(S.months[S.currentMonth].items||[]).find(i=>i.id===id);
+  if(!it) return;
+  const seq=['','utile','sfizio'];
+  it.tipo=seq[(seq.indexOf(it.tipo||'')+1)%3];
+  save(); renderMain();
+}
+
+function updateComputed() {
+  const p=parseFloat(document.getElementById('f-prezzo').value)||0;
+  const s1=parseFloat(document.getElementById('f-sc1').value)||0;
+  const s2=parseFloat(document.getElementById('f-sc2').value)||0;
+  const s3=parseFloat(document.getElementById('f-sc3').value)||0;
+  const tot=Math.max(0,p-s1-s2-s3);
+  const av=document.getElementById('f-altrove').value;
+  const alt=av!==''?parseFloat(av):p;
+  const risp=alt-tot;
+  document.getElementById('c-totale').textContent=eur(tot);
+  const cd=document.getElementById('c-risparmio');
+  cd.textContent=eur(risp);
+  cd.style.color=risp>=0?'var(--utile)':'var(--sfizio)';
+}
+
+function selTipo(el) {
+  document.querySelectorAll('.tipo-option').forEach(o=>{
+    o.classList.remove('sel-utile','sel-sfizio','sel-none');
+  });
+  const t=el.dataset.tipo;
+  el.classList.add(t==='utile'?'sel-utile':t==='sfizio'?'sel-sfizio':'sel-none');
+}
+
+function fillCatSel(sel) {
+  document.getElementById('f-cat').innerHTML=
+    `<option value="">— Nessuna —</option>`+
+    S.categories.map(c=>`<option value="${c}" ${c===sel?'selected':''}>${c}</option>`).join('');
+}
+
+function closeItemModal(){closeModal('item-modal-overlay');}
+
+// ══════════════════════════════════════════
+//  MONTH MODAL
+// ══════════════════════════════════════════
+function showMonthModal() {
+  document.getElementById('f-month-name').value='';
+  openModal('month-modal-overlay');
+  setTimeout(()=>document.getElementById('f-month-name').focus(),120);
+}
+
+function saveMonth() {
+  const name=document.getElementById('f-month-name').value.trim();
+  if(!name){toast('Inserisci il nome del mese ⚠️');return;}
+  const id=uid();
+  S.months[id]={name,items:[]};
+  S.currentMonth=id;
+  save(); closeModal('month-modal-overlay'); render();
+  toast(`Mese "${name}" creato ✓`);
+}
+
+function delMonth(id) {
+  const m=S.months[id];
+  if(!confirm(`Eliminare il mese "${m.name}"?\nTutti i dati verranno persi.`)) return;
+  delete S.months[id];
+  if(S.currentMonth===id) {
+    const k=Object.keys(S.months);
+    S.currentMonth=k.length?k[k.length-1]:null;
+  }
+  save(); render();
+}
+
+function selMonth(id) {
+  S.currentMonth=id; S.filterTipo=''; S.filterCat=''; S.sortBy='order';
+  render();
+}
+
+// ══════════════════════════════════════════
+//  CATEGORIES MODAL
+// ══════════════════════════════════════════
+function showCatModal() {
+  document.getElementById('cat-list-modal').innerHTML=
+    S.categories.map((c,i)=>`
+      <div class="cat-item">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="cat-dot" style="background:${CAT_COLORS[i%CAT_COLORS.length]}"></div>
+          <span style="font-size:14px">${esc(c)}</span>
+        </div>
+        <button class="action-btn del" onclick="removeCategory(${i})" title="Elimina">✕</button>
+      </div>`).join('');
+  document.getElementById('f-new-cat').value='';
+  openModal('cat-modal-overlay');
+}
+
+function addCategory() {
+  const v=document.getElementById('f-new-cat').value.trim();
+  if(!v) return;
+  if(S.categories.includes(v)){toast('Categoria già esistente');return;}
+  S.categories.push(v); save(); showCatModal();
+}
+
+function removeCategory(i) {
+  const cat=S.categories[i];
+  S.categories.splice(i,1);
+  Object.values(S.months).forEach(m=>(m.items||[]).forEach(it=>{if(it.categoria===cat)it.categoria='';}));
+  save(); showCatModal();
+}
+
+// ══════════════════════════════════════════
+//  MODAL HELPERS
+// ══════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function handleOvClick(e,id){if(e.target.id===id)closeModal(id);}
+
+// ══════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════
+let _toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ══════════════════════════════════════════
+//  KEYBOARD
+// ══════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')
+    ['item-modal-overlay','month-modal-overlay','cat-modal-overlay'].forEach(closeModal);
+});
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+load();
+if(!S.currentMonth){
+  const k=Object.keys(S.months);
+  if(k.length) S.currentMonth=k[k.length-1];
+}
+render();
+</script>
+</body>
+</html>
