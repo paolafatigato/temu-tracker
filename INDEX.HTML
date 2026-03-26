@@ -5,7 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🛍️ Temu Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
 <style>
+
 :root{
   --orange:#ff7701;
   --orange-dark:#cc6000;
@@ -246,6 +253,54 @@ tbody td{padding:0;vertical-align:middle}
   box-shadow:0 4px 20px rgba(255,119,1,.4)}
 .toast.show{opacity:1;transform:translateY(0)}
 
+/* ── RETURN CHECKBOX ── */
+.ret-check{
+  width:18px;height:18px;border-radius:4px;border:2px solid var(--border2);
+  cursor:pointer;appearance:none;-webkit-appearance:none;
+  background:var(--surface);transition:all .15s;flex-shrink:0;position:relative
+}
+.ret-check:hover{border-color:var(--purple)}
+.ret-check:checked{background:var(--purple);border-color:var(--purple)}
+.ret-check:checked::after{content:'↩';position:absolute;top:-1px;left:1px;
+  font-size:11px;color:white;font-weight:700}
+tbody tr.da-restituire{opacity:.55}
+tbody tr.da-restituire td .cell, tbody tr.da-restituire td .cell-ro{
+  text-decoration:line-through;color:var(--ink3)
+}
+tbody tr.da-restituire .tipo-badge, tbody tr.da-restituire .cat-badge,
+tbody tr.da-restituire .num, tbody tr.da-restituire strong{opacity:.5}
+
+/* ── INFO CARDS (return + cat) ── */
+.info-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:600px){.info-cards{grid-template-columns:1fr}}
+.info-card{
+  border-radius:var(--radius);padding:14px 18px;
+  display:flex;align-items:center;gap:16px;position:relative;overflow:hidden
+}
+.info-card::before{content:'';position:absolute;inset:0;opacity:.08;pointer-events:none}
+.info-card.return-card{
+  background:linear-gradient(135deg,#f5eaf3,#ede0eb);
+  border:1.5px solid var(--purple);
+}
+.info-card.cat-card{
+  background:linear-gradient(135deg,#e0f7f7,#d0eeee);
+  border:1.5px solid var(--teal);
+}
+.info-card .ic-icon{font-size:28px;flex-shrink:0}
+.info-card .ic-body{flex:1;min-width:0}
+.info-card .ic-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
+  font-weight:700;margin-bottom:4px}
+.return-card .ic-lbl{color:var(--purple)}
+.cat-card .ic-lbl{color:var(--teal)}
+.info-card .ic-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:var(--ink)}
+.info-card .ic-sub{font-size:10px;color:var(--ink3);margin-top:3px}
+.cat-select{
+  padding:5px 9px;border:1.5px solid var(--teal);border-radius:var(--radius);
+  background:white;font-family:'Sora',sans-serif;font-size:11px;color:var(--ink);
+  cursor:pointer;margin-top:6px;display:block
+}
+.cat-select:focus{outline:none;border-color:var(--teal)}
+
 /* ── SEP ROW ── */
 .sep-row td{background:linear-gradient(to right,#fff7f0,transparent);
   font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
@@ -255,13 +310,125 @@ tbody td{padding:0;vertical-align:middle}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--ink3)}
+
+
+/* ── LOGIN SCREEN ── */
+.login-screen{
+  position:fixed;inset:0;background:var(--orange);
+  display:flex;align-items:center;justify-content:center;
+  z-index:9999;flex-direction:column;gap:0;
+  transition:opacity .35s
+}
+.login-screen.hidden{opacity:0;pointer-events:none}
+.login-box{
+  background:white;border-radius:20px;padding:48px 42px;
+  text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25);
+  max-width:380px;width:90%
+}
+.login-logo{font-size:52px;margin-bottom:6px}
+.login-title{font-size:26px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--ink3);margin-bottom:32px;line-height:1.4}
+.google-btn{
+  display:flex;align-items:center;gap:12px;justify-content:center;
+  padding:13px 28px;border:2px solid var(--border2);border-radius:12px;
+  background:white;cursor:pointer;font-family:'Sora',sans-serif;
+  font-size:14px;font-weight:600;color:var(--ink);width:100%;
+  transition:all .18s;box-shadow:0 2px 8px rgba(0,0,0,.08)
+}
+.google-btn:hover{background:var(--bg);border-color:var(--orange);box-shadow:0 4px 18px rgba(255,119,1,.2)}
+.google-btn img{width:22px;height:22px}
+.login-footer{margin-top:20px;font-size:11px;color:var(--ink3)}
+
+/* ── LOADING SPINNER ── */
+.app-loading{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  z-index:9998;flex-direction:column;gap:14px
+}
+.app-loading.hidden{display:none}
+.spinner{width:40px;height:40px;border:3px solid var(--border2);
+  border-top-color:var(--orange);border-radius:50%;
+  animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--ink3);font-weight:500}
+
+/* ── USER CHIP in header ── */
+.user-chip{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 10px;
+  border-radius:20px;background:rgba(255,255,255,.15);transition:background .15s}
+.user-chip:hover{background:rgba(255,255,255,.25)}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.5)}
+.user-name{font-size:12px;color:white;font-weight:600;max-width:100px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logout-btn{font-size:10px;color:rgba(255,255,255,.65);background:none;border:none;
+  cursor:pointer;font-family:'Sora',sans-serif;padding:0;transition:color .15s}
+.logout-btn:hover{color:white}
+
+/* ── SYNC INDICATOR ── */
+.sync-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--amber);
+  display:inline-block;margin-left:6px;transition:background .3s;
+  vertical-align:middle
+}
+.sync-dot.saved{background:#4caf50}
+.sync-dot.saving{background:var(--amber);animation:pulse .6s infinite alternate}
+@keyframes pulse{from{opacity:.4}to{opacity:1}}
+
+/* ── SEED IMPORT MODAL ── */
+.seed-modal-body{padding:24px;display:flex;flex-direction:column;gap:16px}
+.drop-zone{
+  border:2px dashed var(--border2);border-radius:var(--radius);
+  padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;
+  background:var(--bg)
+}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--orange);background:var(--orange-light)}
+.drop-zone .dz-icon{font-size:36px;margin-bottom:8px}
+.drop-zone .dz-text{font-size:13px;color:var(--ink3)}
+.drop-zone .dz-text strong{color:var(--orange)}
+.seed-preview{background:var(--bg);border-radius:var(--radius);padding:14px;
+  font-size:12px;color:var(--ink2);border:1px solid var(--border);display:none}
+.seed-warning{background:#fff3e0;border:1px solid #ff9800;border-radius:var(--radius);
+  padding:12px 14px;font-size:12px;color:#7a4300}
 </style>
 </head>
 <body>
 
+<!-- ── LOGIN SCREEN ── -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🛍️</div>
+    <div class="login-title">Temu Tracker</div>
+    <div class="login-sub">Il tuo diario degli acquisti Temu.<br>Accedi per sincronizzare i dati su tutti i dispositivi.</div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Accedi con Google
+    </button>
+    <div class="login-footer">I tuoi dati sono privati e accessibili solo da te.</div>
+  </div>
+</div>
+
+<!-- ── APP LOADING ── -->
+<div class="app-loading" id="app-loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Caricamento dati…</div>
+</div>
+
+<!-- ── APP (shown after login) ── -->
+<div id="app" style="display:none">
+
 <header class="app-header">
-  <div class="app-title">🛍️ Temu <span>Tracker</span></div>
-  <div class="global-stats" id="global-stats"></div>
+  <div class="app-title">🛍️ Temu <span>Tracker</span>
+    <span class="sync-dot" id="sync-dot" title="Salvato"></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="global-stats" id="global-stats"></div>
+    <div id="user-chip" class="user-chip">
+      <img id="user-avatar" class="user-avatar" src="" alt="">
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span id="user-name" class="user-name"></span>
+        <button class="logout-btn" onclick="signOut()">Esci</button>
+      </div>
+    </div>
+  </div>
 </header>
 
 <div class="year-nav" id="year-nav"></div>
@@ -323,9 +490,209 @@ tbody td{padding:0;vertical-align:middle}
   </div>
 </div>
 
+<!-- SEED IMPORT MODAL -->
+<div class="modal-overlay" id="seed-modal-overlay" onclick="handleOvClick(event,'seed-modal-overlay')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-title">📥 Importa dati seed</span>
+      <button class="close-btn" onclick="closeModal('seed-modal-overlay')">✕</button>
+    </div>
+    <div class="seed-modal-body">
+      <div class="seed-warning">
+        ⚠️ L'importazione <strong>aggiunge</strong> i dati del file seed ai tuoi dati esistenti (non sovrascrive). Articoli già presenti potrebbero duplicarsi se importi più volte.
+      </div>
+      <div class="drop-zone" id="seed-drop-zone"
+           onclick="document.getElementById('seed-file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleSeedDrop(event)">
+        <div class="dz-icon">📄</div>
+        <div class="dz-text">Trascina il file <strong>temu_seed.json</strong> qui<br>oppure clicca per selezionarlo</div>
+      </div>
+      <input type="file" id="seed-file-input" accept=".json" style="display:none" onchange="handleSeedFile(this.files[0])">
+      <div class="seed-preview" id="seed-preview"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-s" onclick="closeModal('seed-modal-overlay')">Annulla</button>
+        <button class="btn btn-p" id="import-confirm-btn" style="display:none" onclick="confirmImport()">Importa dati</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end #app -->
+
 <script>
-const SEED = {"may": {"name": "Maggio 2025", "items": [{"id": "may_2", "nome": "cappellino sole", "prezzo": 3.6, "sc1": 0.6, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_3", "nome": "scotch", "prezzo": 2.24, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.24, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_4", "nome": "orecchini", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_5", "nome": "colla attack", "prezzo": 1.82, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.0, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_6", "nome": "penne colorate", "prezzo": 1.65, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.65, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_7", "nome": "spugnette", "prezzo": 1.39, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.0, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_8", "nome": "porta panni invernali", "prezzo": 3.9, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.9, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_9", "nome": "ceralacca kit", "prezzo": 10.8, "sc1": 10.8, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 15.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_10", "nome": "regalo giulia S", "prezzo": 20.0, "sc1": 20.0, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 40.0, "dove": "ubik", "tipo": "utile", "categoria": ""}, {"id": "may_12", "nome": "copri poltrona zia", "prezzo": 15.1, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 15.1, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_13", "nome": "lampade zia", "prezzo": 10.25, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 10.25, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_14", "nome": "lampada zia", "prezzo": 12.24, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 12.24, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_15", "nome": "cuscini", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_17", "nome": "pennarelli stoffa", "prezzo": 8.0, "sc1": 8.0, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 8.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_18", "nome": "lettere", "prezzo": 4.0, "sc1": 4.0, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 5.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "may_19", "nome": "colori stoffa", "prezzo": 9.0, "sc1": 9.0, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 9.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_20", "nome": "maglietta binca", "prezzo": 6.0, "sc1": 6.0, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 6.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_21", "nome": "maglietta bordeaux", "prezzo": 6.0, "sc1": 6.0, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 6.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_23", "nome": "telocamper mamma", "prezzo": 50.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 50.0, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_24", "nome": "strofinaccio mamma", "prezzo": 2.5, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_26", "nome": "sacchetti", "prezzo": 1.1, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_27", "nome": "timbro personalizzato", "prezzo": 3.5, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 13.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "may_28", "nome": "cerchi contare", "prezzo": 1.9, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "may_30", "nome": "colla a caldo 🔫", "prezzo": 18.0, "sc1": 10.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 9.0, "dove": "amazon più brutta e con fili", "tipo": "", "categoria": ""}, {"id": "may_31", "nome": "spiaggina mamma", "prezzo": 47.0, "sc1": 15.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 40.0, "dove": "stesso modello 69", "tipo": "utile", "categoria": ""}, {"id": "may_32", "nome": "sigillo fiore", "prezzo": 4.92, "sc1": 4.92, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.92, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_33", "nome": "spilla bassotto", "prezzo": 0.9, "sc1": 0.9, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 0.9, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_34", "nome": "scheda attrezzi", "prezzo": 0.9, "sc1": 0.9, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 0.9, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_35", "nome": "2 😎 occhiali", "prezzo": 3.88, "sc1": 3.88, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 8.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_36", "nome": "regalo luli racc", "prezzo": 7.3, "sc1": 7.3, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 9.0, "dove": "amazon + bruto", "tipo": "utile", "categoria": ""}, {"id": "may_37", "nome": "regalo luli bast", "prezzo": 3.77, "sc1": 3.77, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 14.0, "dove": "amazon", "tipo": "utile", "categoria": ""}, {"id": "may_38", "nome": "spilla 💗💗💗", "prezzo": 0.75, "sc1": 0.75, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_39", "nome": "timbro indirizzo", "prezzo": 4.32, "sc1": 4.32, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 17.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "may_40", "nome": "sigillo 👁️", "prezzo": 3.43, "sc1": 3.43, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 12.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "may_41", "nome": "animaletti", "prezzo": 3.26, "sc1": 3.26, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.26, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "may_42", "nome": "scarpe", "prezzo": 6.11, "sc1": 6.11, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 18.0, "dove": "amazon", "tipo": "utile", "categoria": ""}, {"id": "may_43", "nome": "ichiostro timbri nero", "prezzo": 1.05, "sc1": 1.05, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "may_44", "nome": "ichiostro timbri viola", "prezzo": 1.65, "sc1": 1.65, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 7.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "may_45", "nome": "ichiostro timbri marro", "prezzo": 1.32, "sc1": 1.32, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "may_47", "nome": "carta termica", "prezzo": 3.9, "sc1": 3.9, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.9, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_48", "nome": "timbro EX-LIBRIS", "prezzo": 4.7, "sc1": 1.13, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 4.7, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_50", "nome": "brillantini 36 set", "prezzo": 2.38, "sc1": 2.35, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.38, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_51", "nome": "timbro tondo", "prezzo": 2.63, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_52", "nome": "lenti verdi", "prezzo": 3.27, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 9.9, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "may_53", "nome": "album x adesivi", "prezzo": 2.61, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.61, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_54", "nome": "diario giappone frankhenstein", "prezzo": 4.67, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "feltrinelli", "prezzoAltrove": 14.0, "dove": "feltrinelli", "tipo": "", "categoria": ""}, {"id": "may_55", "nome": "zanzariera", "prezzo": 2.15, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.15, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_56", "nome": "torcia testa", "prezzo": 3.95, "sc1": 3.55, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 7.0, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "may_57", "nome": "quadernino vintage", "prezzo": 2.63, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 5.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_59", "nome": "penna glitter", "prezzo": 1.66, "sc1": 1.67, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.66, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_60", "nome": "carte corpo", "prezzo": 4.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 10.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_61", "nome": "quaderno giallo rosa", "prezzo": 3.14, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.14, "dove": "", "tipo": "", "categoria": ""}, {"id": "may_63", "nome": "grammofono", "prezzo": 62.0, "sc1": 62.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 62.0, "dove": "", "tipo": "", "categoria": ""}]}, "june": {"name": "Giugno 2025", "items": [{"id": "june_2", "nome": "zaino colorato", "prezzo": 13.34, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 40.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_3", "nome": "canotta marrone", "prezzo": 3.19, "sc1": 3.0, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.19, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_4", "nome": "bastoncini fluo colla", "prezzo": 1.26, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.26, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_5", "nome": "borraccia", "prezzo": 7.7, "sc1": 5.9, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 7.7, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_6", "nome": "STAMPANTE", "prezzo": 75.0, "sc1": 75.0, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 60.0, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "june_8", "nome": "maglietta blu", "prezzo": 5.6, "sc1": 5.6, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.6, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_9", "nome": "vestito grigio", "prezzo": 10.45, "sc1": 10.45, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 10.45, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_10", "nome": "pressa fiori", "prezzo": 7.75, "sc1": 7.75, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 7.75, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_12", "nome": "ceralacca 200", "prezzo": 1.9, "sc1": 1.9, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.9, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_13", "nome": "6pennelli verdi", "prezzo": 1.61, "sc1": 1.61, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.61, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_14", "nome": "tappetino", "prezzo": 1.11, "sc1": 1.11, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.11, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_16", "nome": "rotelline papà mamma", "prezzo": 1.17, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.17, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "june_17", "nome": "rotelline papà mamma", "prezzo": 1.3, "sc1": 1.3, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.3, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "june_18", "nome": "manicotti termici papà mamma", "prezzo": 2.34, "sc1": 2.34, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.34, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "june_19", "nome": "rotelline papà mamma", "prezzo": 1.3, "sc1": 1.3, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.3, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "june_20", "nome": "pallone mamma boris", "prezzo": 5.0, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_21", "nome": "porta dentiera", "prezzo": 3.0, "sc1": 3.0, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_22", "nome": "sacchi differenziata", "prezzo": 7.76, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 7.76, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "june_24", "nome": "spatolina x ceralacca", "prezzo": 0.96, "sc1": 0.96, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 0.96, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_25", "nome": "spilla rainbow", "prezzo": 0.64, "sc1": 0.64, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 0.64, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_26", "nome": "stuzzicadenti", "prezzo": 1.1, "sc1": 1.1, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.1, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "june_28", "nome": "vestito bianco sexy", "prezzo": 5.49, "sc1": 5.49, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.49, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_30", "nome": "pantalone tuta nero", "prezzo": 11.52, "sc1": 6.75, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 10.0, "dove": "decathlon", "tipo": "", "categoria": ""}, {"id": "june_31", "nome": "felpa verde acqua", "prezzo": 4.39, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 25.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_32", "nome": "timbro foglia", "prezzo": 3.21, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.21, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_33", "nome": "colla a clado colorati trasparenti", "prezzo": 1.91, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.91, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_34", "nome": "raccoglitore scuola", "prezzo": 3.28, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.28, "dove": "", "tipo": "", "categoria": ""}, {"id": "june_35", "nome": "timbro fiore personalizzato", "prezzo": 3.26, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 8.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "june_36", "nome": "fiori essiccati", "prezzo": 1.09, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}]}, "summer": {"name": "Estate 2025", "items": [{"id": "summer_2", "nome": "pallone beach", "prezzo": 7.35, "sc1": 7.35, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "summer_3", "nome": "porta cellulare braccio", "prezzo": 2.24, "sc1": 2.24, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_4", "nome": "tappetino yoga", "prezzo": 4.09, "sc1": 4.09, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "summer_6", "nome": "racchetta paddle rosa", "prezzo": 23.62, "sc1": 23.62, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "summer_7", "nome": "racchetta paddle verde", "prezzo": 25.64, "sc1": 16.24, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "summer_8", "nome": "racchetta tenniss", "prezzo": 21.06, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_9", "nome": "lycra mamma", "prezzo": 4.4, "sc1": 4.4, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 4.4, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "summer_11", "nome": "grucce", "prezzo": 6.0, "sc1": 6.0, "sc2": 0, "sc3": 0, "motivo": "rimborso, credito", "prezzoAltrove": 6.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_12", "nome": "quaderno azzurro :)", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_13", "nome": "pinzette", "prezzo": 1.48, "sc1": 1.48, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 1.48, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_15", "nome": "fili cucire", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_16", "nome": "kit aghi agendine", "prezzo": 5.64, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 5.64, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_17", "nome": "kit foto prodotti", "prezzo": 15.64, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 15.64, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_18", "nome": "borsa libri", "prezzo": 3.28, "sc1": 2.62, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 3.28, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_19", "nome": "contenitore sigilli", "prezzo": 0.82, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.82, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_20", "nome": "100 adesivi sigilli", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_21", "nome": "ceralacca bianca", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_22", "nome": "cucchiaino cera", "prezzo": 1.28, "sc1": 1.28, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 1.28, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_23", "nome": "timbro ape", "prezzo": 3.37, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.37, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_24", "nome": "kit pressa fiori", "prezzo": 2.08, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.08, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_26", "nome": "nastro isolante", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_27", "nome": "flaconi doccia", "prezzo": 5.79, "sc1": 4.81, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.79, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_28", "nome": "ventilatore grande elle", "prezzo": 9.81, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 9.81, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_29", "nome": "pennarelli riflettenti", "prezzo": 2.02, "sc1": 2.02, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.02, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_30", "nome": "kit fiori piccolo", "prezzo": 3.13, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.13, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_31", "nome": "ceralacca blu", "prezzo": 1.64, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.64, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_32", "nome": "portaocchiali rosa", "prezzo": 1.96, "sc1": 1.96, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.96, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_33", "nome": "glitter penna", "prezzo": 1.58, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.58, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_38", "nome": "campanellino rosa", "prezzo": 1.2, "sc1": 1.2, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.2, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "summer_39", "nome": "lettere legno", "prezzo": 2.98, "sc1": 2.98, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.98, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "summer_40", "nome": "anelli antistress", "prezzo": 2.61, "sc1": 2.61, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.61, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "summer_41", "nome": "fidget spinners", "prezzo": 2.8, "sc1": 2.8, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.8, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_42", "nome": "scatola blu", "prezzo": 6.88, "sc1": 6.88, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 6.88, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_43", "nome": "scatola bianca", "prezzo": 3.2, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.2, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_44", "nome": "dollari", "prezzo": 7.28, "sc1": 7.28, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 7.28, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_45", "nome": "palline antistress", "prezzo": 4.7, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.7, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_46", "nome": "magneti vestiti", "prezzo": 1.26, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.26, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_47", "nome": "segnalibri", "prezzo": 0.4, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.4, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_48", "nome": "pictionary", "prezzo": 11.97, "sc1": 11.97, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 11.97, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_49", "nome": "unsolved case", "prezzo": 7.91, "sc1": 7.91, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 7.91, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_50", "nome": "borsa tracolla", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_51", "nome": "40pz antistress", "prezzo": 4.71, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.71, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_53", "nome": "spilla rossa capelli", "prezzo": 1.29, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.29, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_54", "nome": "brillantini", "prezzo": 1.36, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.36, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_56", "nome": "poster", "prezzo": 1.85, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 1.85, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_57", "nome": "poster", "prezzo": 2.24, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.24, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_58", "nome": "poster", "prezzo": 1.38, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.38, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_59", "nome": "scatola bianca", "prezzo": 6.95, "sc1": 6.95, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 6.95, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_60", "nome": "stecchine poster", "prezzo": 3.76, "sc1": 3.76, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 3.76, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_61", "nome": "stecchine poster", "prezzo": 3.61, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.61, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_62", "nome": "stecchine poster", "prezzo": 2.96, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.96, "dove": "", "tipo": "", "categoria": ""}, {"id": "summer_63", "nome": "facce feltro emozioni", "prezzo": 3.26, "sc1": 3.26, "sc2": 0, "sc3": 0, "motivo": "reso", "prezzoAltrove": 3.26, "dove": "", "tipo": "", "categoria": ""}]}, "september": {"name": "Settembre 2025", "items": [{"id": "september_2", "nome": "parrucca arancio", "prezzo": 6.91, "sc1": 6.91, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_3", "nome": "pennelli", "prezzo": 0.66, "sc1": 0.66, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_4", "nome": "bicchieri beerpong", "prezzo": 3.99, "sc1": 3.99, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "september_5", "nome": "3 impermeabili 🟠", "prezzo": 1.81, "sc1": 1.81, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_6", "nome": "caricabatterie", "prezzo": 7.9, "sc1": 7.9, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": 12.0, "dove": "amazon", "tipo": "utile", "categoria": ""}, {"id": "september_7", "nome": "cornici magnetiche", "prezzo": 13.35, "sc1": 13.35, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "september_8", "nome": "soldi", "prezzo": 3.68, "sc1": 3.68, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_9", "nome": "ombrello arcobaleno", "prezzo": 6.34, "sc1": 6.34, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "september_11", "nome": "📕wimpy kid orange", "prezzo": 6.39, "sc1": 6.39, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 9.35, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "september_12", "nome": "📕wimpy kid purple", "prezzo": 6.35, "sc1": 6.35, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 9.35, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "september_14", "nome": "colori acquerelli", "prezzo": 1.25, "sc1": 1.25, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_15", "nome": "parrucca yayoi", "prezzo": 3.05, "sc1": 3.05, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 9.75, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "september_16", "nome": "tende mercato", "prezzo": 4.77, "sc1": 4.77, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_17", "nome": "pennelli fini legno", "prezzo": 0.88, "sc1": 0.88, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_19", "nome": "elmo", "prezzo": 3.22, "sc1": 3.22, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_20", "nome": "tridente", "prezzo": 4.17, "sc1": 4.17, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_21", "nome": "fascia greca", "prezzo": 1.4, "sc1": 1.4, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_22", "nome": "corona", "prezzo": 3.77, "sc1": 3.77, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_23", "nome": "sottogonna", "prezzo": 3.3, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_24", "nome": "vestito bourdeaux", "prezzo": 18.6, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_26", "nome": "cappello cappellaio", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_27", "nome": "melograno", "prezzo": 3.74, "sc1": 3.74, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_28", "nome": "mantello nero tulle", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_29", "nome": "cinta foglie dorate", "prezzo": 1.95, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_32", "nome": "pennarelli lavagna 12", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 11.95, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "september_34", "nome": "cavo usb azzurro", "prezzo": 0.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_35", "nome": "spazzola lavare", "prezzo": 5.51, "sc1": 5.51, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 13.99, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "september_36", "nome": "ganci bagno", "prezzo": 4.23, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 14.99, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_37", "nome": "porta coperchi", "prezzo": 3.33, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.33, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "september_38", "nome": "portachiavi nuvola e", "prezzo": 1.31, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.31, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "september_41", "nome": "scarpe colori chiari", "prezzo": 19.39, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "temu", "prezzoAltrove": 19.39, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "september_43", "nome": "ombrello con fiori trasparente", "prezzo": 6.63, "sc1": 6.63, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 7.0, "dove": "negozio", "tipo": "", "categoria": ""}, {"id": "september_45", "nome": "candele arancioni", "prezzo": 5.05, "sc1": 5.05, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 5.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_46", "nome": "candele marroni", "prezzo": 4.61, "sc1": 4.61, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 5.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_47", "nome": "tovaglia", "prezzo": 3.42, "sc1": 3.42, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.42, "dove": "temu", "tipo": "sfizio", "categoria": ""}, {"id": "september_48", "nome": "tovaglia", "prezzo": 3.44, "sc1": 3.44, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.44, "dove": "temu", "tipo": "sfizio", "categoria": ""}, {"id": "september_49", "nome": "tovaglia", "prezzo": 3.26, "sc1": 3.26, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.26, "dove": "temu", "tipo": "sfizio", "categoria": ""}, {"id": "september_50", "nome": "tovaglia", "prezzo": 4.83, "sc1": 4.83, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.83, "dove": "temu", "tipo": "sfizio", "categoria": ""}, {"id": "september_51", "nome": "candele rosse", "prezzo": 3.18, "sc1": 3.18, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.18, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "september_52", "nome": "candele bianche", "prezzo": 1.33, "sc1": 1.33, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_53", "nome": "portacandele", "prezzo": 2.71, "sc1": 2.71, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 6.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_54", "nome": "portacandele 2 manico", "prezzo": 2.89, "sc1": 2.89, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 11.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_55", "nome": "portacandele 3", "prezzo": 2.81, "sc1": 2.81, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 14.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_58", "nome": "fogli quadretti", "prezzo": 3.74, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.0, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "september_60", "nome": "penne nere", "prezzo": 1.81, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 3.99, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_61", "nome": "penne colorate", "prezzo": 6.09, "sc1": 6.09, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 9.26, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "september_62", "nome": "portapenne", "prezzo": 1.08, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.79, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "september_65", "nome": "comodino elle", "prezzo": 9.05, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 9.05, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "september_67", "nome": "astuccio verde", "prezzo": 1.4, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.4, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_69", "nome": "sacchetto mollette", "prezzo": 1.78, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.78, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "september_70", "nome": "vasetto cucina", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_71", "nome": "vasetto cucina", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_72", "nome": "portaposate", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "september_73", "nome": "tovaglia pvc", "prezzo": 6.74, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 6.74, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "september_74", "nome": "tovaglia pvc", "prezzo": 4.72, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.72, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "september_75", "nome": "porta cartaigienica", "prezzo": 2.13, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.13, "dove": "", "tipo": "utile", "categoria": ""}]}, "october": {"name": "Ottobre 2025", "items": [{"id": "october_2", "nome": "post its", "prezzo": 3.78, "sc1": 3.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 3.78, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "october_3", "nome": "sciogliere ceralacca2", "prezzo": 1.26, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.26, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_4", "nome": "NFC sottili 30", "prezzo": 2.7, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.7, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "october_5", "nome": "NFC amazon", "prezzo": 5.19, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 11.99, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "october_6", "nome": "NFC tondi 50", "prezzo": 4.3, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 7.99, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "october_7", "nome": "NFC tondi 80", "prezzo": 4.19, "sc1": 4.19, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 13.39, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "october_8", "nome": "NFC 100", "prezzo": 5.38, "sc1": 5.38, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 15.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "october_9", "nome": "poster 👌", "prezzo": 2.21, "sc1": 2.21, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.21, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_10", "nome": "poster LIS", "prezzo": 2.15, "sc1": 2.15, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 2.15, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "october_11", "nome": "organizer", "prezzo": 9.24, "sc1": 9.24, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 9.24, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "october_12", "nome": "ottagoni per punes", "prezzo": 7.63, "sc1": 7.62, "sc2": 0, "sc3": 0, "motivo": "1cent", "prezzoAltrove": 7.63, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_13", "nome": "CARTE personalizzate", "prezzo": 15.63, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 68.0, "dove": "amazon", "tipo": "sfizio", "categoria": ""}, {"id": "october_14", "nome": "CARTE 100 gradient", "prezzo": 9.0, "sc1": 9.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 9.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_15", "nome": "CARTE 200", "prezzo": 8.88, "sc1": 3.0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.88, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_16", "nome": "poster🛹", "prezzo": 2.21, "sc1": 0.8, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.21, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_18", "nome": "collare barocco", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_19", "nome": "giacca rossa coda", "prezzo": 15.73, "sc1": 10.5, "sc2": 0, "sc3": 0, "motivo": "sconto 70%", "prezzoAltrove": 15.73, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_20", "nome": "ali fata", "prezzo": 5.74, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 8.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "october_21", "nome": "ghirlanda", "prezzo": 1.98, "sc1": 2.0, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_22", "nome": "parrucca bianca donn", "prezzo": 10.23, "sc1": 3.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 17.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "october_24", "nome": "orecchini omini", "prezzo": 1.49, "sc1": 1.49, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.49, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_25", "nome": "orecchini cerchietti", "prezzo": 1.11, "sc1": 1.11, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.11, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_26", "nome": "collanina", "prezzo": 1.11, "sc1": 1.11, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.11, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_27", "nome": "maglione fluo", "prezzo": 10.86, "sc1": 10.86, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 10.86, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_28", "nome": "maglione pastello", "prezzo": 25.29, "sc1": 15.0, "sc2": 0, "sc3": 0, "motivo": "sconto e credito", "prezzoAltrove": 40.0, "dove": "negozi", "tipo": "", "categoria": ""}, {"id": "october_29", "nome": "scarpe verdi", "prezzo": 9.92, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 9.92, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_30", "nome": "perline", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "f", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_31", "nome": "carta regalo", "prezzo": 3.0, "sc1": 3.0, "sc2": 0, "sc3": 0, "motivo": "f", "prezzoAltrove": 3.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_32", "nome": "collanina", "prezzo": 1.2, "sc1": 0.3, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 1.2, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_33", "nome": "orecchini trattino", "prezzo": 0.1, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 0.1, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_35", "nome": "carte", "prezzo": 0.1, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "october_36", "nome": "buste immon rosa", "prezzo": 1.57, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "supermercato", "prezzoAltrove": 1.2, "dove": "supermercato", "tipo": "", "categoria": ""}, {"id": "october_37", "nome": "calze dita giulia", "prezzo": 4.29, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 4.29, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_38", "nome": "nastro adesivo", "prezzo": 1.51, "sc1": 1.51, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.0, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "october_39", "nome": "buste immon verdi", "prezzo": 1.95, "sc1": 1.95, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.1, "dove": "supermercato", "tipo": "", "categoria": ""}, {"id": "october_40", "nome": "nastro adesivo", "prezzo": 1.76, "sc1": 1.76, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_41", "nome": "cestino scrivania", "prezzo": 8.51, "sc1": 9.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 2.5, "dove": "ikea", "tipo": "", "categoria": ""}, {"id": "october_42", "nome": "guanti elle", "prezzo": 3.53, "sc1": 3.52, "sc2": 0, "sc3": 0, "motivo": "1cent", "prezzoAltrove": 1.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_43", "nome": "colla", "prezzo": 1.26, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.26, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_44", "nome": "porta saponi doccia", "prezzo": 5.72, "sc1": 1.9, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 22.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "october_46", "nome": "LIBRI", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_47", "nome": "robinson crusoe", "prezzo": 10.76, "sc1": 10.76, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 13.41, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "october_48", "nome": "a midsummer", "prezzo": 12.62, "sc1": 12.62, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 16.47, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "october_49", "nome": "guerra dei mondi", "prezzo": 9.34, "sc1": 9.34, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 10.99, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "october_51", "nome": "camicia bianca", "prezzo": 5.7, "sc1": 2.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 5.7, "dove": "Temu", "tipo": "utile", "categoria": ""}, {"id": "october_52", "nome": "camicia bianca", "prezzo": 4.7, "sc1": 1.5, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 4.7, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_53", "nome": "giacca beige", "prezzo": 17.06, "sc1": 5.1, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 17.06, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_54", "nome": "cravatta☠️", "prezzo": 3.4, "sc1": 3.4, "sc2": 0, "sc3": 0, "motivo": "sconto rimborso", "prezzoAltrove": 3.4, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_56", "nome": "puness 20", "prezzo": 5.02, "sc1": 5.01, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 4.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_57", "nome": "scheda sd", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 16.0, "dove": "mediaworld", "tipo": "", "categoria": ""}, {"id": "october_58", "nome": "puness legno", "prezzo": 3.0, "sc1": 3.0, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 3.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_59", "nome": "fermalibri rosa", "prezzo": 4.0, "sc1": 4.0, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 4.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_61", "nome": "giacca velluto blu", "prezzo": 17.0, "sc1": 4.6, "sc2": 0, "sc3": 0, "motivo": "reso parziale", "prezzoAltrove": 17.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_62", "nome": "felpa viola e gialla", "prezzo": 15.9, "sc1": 3.14, "sc2": 0, "sc3": 0, "motivo": "reso parziale", "prezzoAltrove": 15.9, "dove": "", "tipo": "", "categoria": ""}, {"id": "october_64", "nome": "pupino sgabello", "prezzo": 15.51, "sc1": 15.51, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 15.51, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_65", "nome": "vasetto orecchini", "prezzo": 2.66, "sc1": 2.66, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.66, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_66", "nome": "cornice rosa", "prezzo": 6.25, "sc1": 6.25, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 6.25, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_68", "nome": "giacca fuxia", "prezzo": 11.81, "sc1": 11.81, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 11.81, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_69", "nome": "giacca bordeaux", "prezzo": 16.51, "sc1": 16.51, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 16.51, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_70", "nome": "gilet", "prezzo": 10.71, "sc1": 10.71, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 10.71, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_71", "nome": "numerini adesivi", "prezzo": 0.84, "sc1": 0.84, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 0.84, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_72", "nome": "portapenne", "prezzo": 0.77, "sc1": 0.77, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 0.77, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_74", "nome": "giacca verde laura", "prezzo": 14.3, "sc1": 14.3, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 14.3, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_75", "nome": "giacca verde bottoni", "prezzo": 21.16, "sc1": 21.16, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 21.16, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_76", "nome": "campanello bici", "prezzo": 1.06, "sc1": 1.06, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.06, "dove": "Temu", "tipo": "utile", "categoria": ""}, {"id": "october_77", "nome": "portapenne", "prezzo": 1.0, "sc1": 1.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.0, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_79", "nome": "giacca rame", "prezzo": 14.64, "sc1": 14.64, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 14.64, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_80", "nome": "portapenne fiore", "prezzo": 1.0, "sc1": 1.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.0, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_81", "nome": "portapenne verde", "prezzo": 1.0, "sc1": 1.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.0, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_82", "nome": "portapenne bianco", "prezzo": 1.0, "sc1": 1.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.0, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_83", "nome": "portapenne faccina", "prezzo": 1.0, "sc1": 1.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.0, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_84", "nome": "adesivi 3d", "prezzo": 2.0, "sc1": 2.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.0, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_85", "nome": "adesivi numeri", "prezzo": 0.66, "sc1": 0.66, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 0.66, "dove": "Temu", "tipo": "sfizio", "categoria": ""}, {"id": "october_86", "nome": "cornici magnetiche", "prezzo": 7.78, "sc1": 7.78, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 7.78, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_87", "nome": "giacca pattern vecchi", "prezzo": 15.47, "sc1": 15.47, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 15.47, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_88", "nome": "orecchini arcobaleno", "prezzo": 1.12, "sc1": 1.12, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.12, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_89", "nome": "guanti forno", "prezzo": 2.99, "sc1": 2.99, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.99, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_91", "nome": "felpa fuxia righe", "prezzo": 18.37, "sc1": 18.37, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 18.37, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_92", "nome": "piggy bank", "prezzo": 2.34, "sc1": 2.34, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.34, "dove": "Temu", "tipo": "utile", "categoria": ""}, {"id": "october_93", "nome": "cardigan nero bottoni", "prezzo": 11.58, "sc1": 11.58, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 11.58, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_94", "nome": "portapenne trasp", "prezzo": 2.9, "sc1": 2.9, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.9, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_96", "nome": "cravatta bordeauz", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 1.68, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_97", "nome": "cravatta cavalli", "prezzo": 3.4, "sc1": 3.4, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 3.83, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_98", "nome": "cravatta blu", "prezzo": 2.37, "sc1": 2.37, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.28, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_99", "nome": "camicia righe", "prezzo": 7.0, "sc1": 7.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 6.73, "dove": "Temu", "tipo": "", "categoria": ""}, {"id": "october_100", "nome": "poster today", "prezzo": 0.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "Temu", "prezzoAltrove": 0.99, "dove": "Temu", "tipo": "", "categoria": ""}]}, "november25": {"name": "Novembre 2025", "items": [{"id": "november25_2", "nome": "scotch viola", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_4", "nome": "cappello bianconiglio", "prezzo": 7.48, "sc1": 7.48, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 7.48, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_5", "nome": "piatti e tazze", "prezzo": 7.36, "sc1": 2.64, "sc2": 0, "sc3": 0, "motivo": "sconto, rimborso parziale", "prezzoAltrove": 7.36, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_6", "nome": "tazze", "prezzo": 2.77, "sc1": 0.55, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 2.77, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_7", "nome": "poster macbeth", "prezzo": 2.6, "sc1": 0.52, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 2.6, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_8", "nome": "poster hamlet", "prezzo": 2.53, "sc1": 0.52, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 2.53, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_9", "nome": "poster middsommar", "prezzo": 2.84, "sc1": 0.56, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 2.84, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_11", "nome": "poster confused", "prezzo": 5.56, "sc1": 5.56, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 5.5, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_12", "nome": "penne cancellabili", "prezzo": 3.65, "sc1": 3.64, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": 3.6, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_13", "nome": "scotch viola", "prezzo": 6.0, "sc1": 6.0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_15", "nome": "parrucca verde", "prezzo": 3.29, "sc1": 3.29, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 4.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_17", "nome": "bottoni lucidi grandi", "prezzo": 1.28, "sc1": 1.28, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.28, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_18", "nome": "portapennarelli adesi", "prezzo": 1.23, "sc1": 1.23, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.23, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "november25_20", "nome": "giacca doubleface", "prezzo": 24.0, "sc1": 24.0, "sc2": 0, "sc3": 0, "motivo": "sconto, credito", "prezzoAltrove": 20.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_21", "nome": "giacca imbottitia elle", "prezzo": 25.22, "sc1": 25.22, "sc2": 0, "sc3": 0, "motivo": "sconto, credito", "prezzoAltrove": 20.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_23", "nome": "evidenziatorini", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": 4.0, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "november25_24", "nome": "tape elettrico  x10", "prezzo": 3.58, "sc1": 3.58, "sc2": 0, "sc3": 0, "motivo": "sconto, rimborso", "prezzoAltrove": 3.58, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_25", "nome": "adesivi stampante", "prezzo": 2.27, "sc1": 2.27, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.27, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_27", "nome": "matite motivational", "prezzo": 2.0, "sc1": 1.99, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": 2.0, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "november25_28", "nome": "stickers book", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_32", "nome": "parastinchi medieva", "prezzo": 1.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_33", "nome": "medieval cape", "prezzo": 8.34, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.34, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_34", "nome": "rebel princess", "prezzo": 9.87, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 9.87, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_37", "nome": "mini 📷 camera", "prezzo": 9.85, "sc1": 5.69, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 9.85, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_38", "nome": "microphon🎤", "prezzo": 4.6, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.6, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_39", "nome": "cavatappi", "prezzo": 2.46, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.46, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "november25_40", "nome": "penne nere", "prezzo": 1.85, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.85, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_41", "nome": "tape argentato", "prezzo": 1.82, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.82, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_42", "nome": "faccine adesivi", "prezzo": 1.61, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.61, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_44", "nome": "coprisellino", "prezzo": 1.31, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.31, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_45", "nome": "coprisellino", "prezzo": 1.51, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.51, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_46", "nome": "evidenziatori cancella", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_47", "nome": "penne nere", "prezzo": 0.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_48", "nome": "costume alice", "prezzo": 14.5, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 14.5, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_49", "nome": "adesivi good job", "prezzo": 1.83, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.83, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_51", "nome": "red carpet", "prezzo": 7.14, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 7.14, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_52", "nome": "uniposka", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_53", "nome": "pennarelli lavagna", "prezzo": 1.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_54", "nome": "ricarica matite", "prezzo": 0.91, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.91, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_55", "nome": "puzzle Giulia", "prezzo": 13.28, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 13.28, "dove": "", "tipo": "", "categoria": ""}, {"id": "november25_57", "nome": "portapuzzle Giulia", "prezzo": 12.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 12.0, "dove": "", "tipo": "", "categoria": ""}]}, "december": {"name": "Dicembre 2025", "items": [{"id": "december_2", "nome": "30 matite", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_3", "nome": "penne nere metalliche", "prezzo": 1.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_4", "nome": "guanti pelle", "prezzo": 4.25, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.25, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_5", "nome": "spade legno", "prezzo": 2.28, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.28, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_6", "nome": "spada giocattolo", "prezzo": 2.97, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.97, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_8", "nome": "ganti lilla", "prezzo": 1.59, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.59, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_9", "nome": "guanti verdi", "prezzo": 1.93, "sc1": 1.93, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.93, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_10", "nome": "cartelle trasparenti", "prezzo": 4.99, "sc1": 4.99, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_11", "nome": "5 raccoglitori", "prezzo": 14.11, "sc1": 14.11, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 14.11, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_13", "nome": "adesivi muro rosa", "prezzo": 2.64, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.64, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_14", "nome": "adesivi muro gialli", "prezzo": 1.69, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.69, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_15", "nome": "adesivi quadri", "prezzo": 2.07, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.07, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_16", "nome": "portatelefono", "prezzo": 0.62, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.62, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_17", "nome": "tape luminous", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_18", "nome": "fotocamera", "prezzo": 10.67, "sc1": 6.5, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 10.67, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_19", "nome": "adesivi tondini", "prezzo": 0.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 0.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "december_20", "nome": "timbro personalizzato", "prezzo": 3.14, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.14, "dove": "", "tipo": "", "categoria": ""}]}, "jan26": {"name": "Gennaio 2026", "items": [{"id": "jan26_2", "nome": "cappellino righe", "prezzo": 2.34, "sc1": 1.93, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.34, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_3", "nome": "sciarpa lilla", "prezzo": 6.18, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 6.18, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "jan26_4", "nome": "sciarpa rossa rosa", "prezzo": 8.87, "sc1": 5.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 8.87, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_6", "nome": "fogli laminatrice", "prezzo": 8.39, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.39, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_7", "nome": "tintura stoffe", "prezzo": 11.59, "sc1": 10.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 11.59, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_8", "nome": "vinile verde chameleo", "prezzo": 8.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.99, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_9", "nome": "vinile lucido", "prezzo": 8.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_10", "nome": "tessuto retina libri", "prezzo": 1.81, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.81, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_11", "nome": "penna lamina termica", "prezzo": 6.08, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 6.08, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_12", "nome": "vinile argento", "prezzo": 0.01, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 0.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_13", "nome": "colla vinilica", "prezzo": 3.1, "sc1": 3.1, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 3.1, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_14", "nome": "piegatori", "prezzo": 1.39, "sc1": 0.03, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.39, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_15", "nome": "righelli rilegatura", "prezzo": 1.75, "sc1": 1.65, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.75, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_17", "nome": "guanti lilla mamma", "prezzo": 2.37, "sc1": 2.37, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.37, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "jan26_18", "nome": "guanti verdi mamma", "prezzo": 2.79, "sc1": 2.79, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.79, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_19", "nome": "calzini mamma", "prezzo": 1.79, "sc1": 1.79, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.79, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_20", "nome": "togli pelucchi mamma", "prezzo": 3.48, "sc1": 3.7, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.48, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "jan26_22", "nome": "cartoncini", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_23", "nome": "raso per segnalibro", "prezzo": 3.01, "sc1": 3.01, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.01, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_24", "nome": "vinile termotrasferibil", "prezzo": 8.02, "sc1": 8.02, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 8.02, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_25", "nome": "carta trasferimento", "prezzo": 7.12, "sc1": 7.12, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 7.12, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_26", "nome": "tappetino tagliare", "prezzo": 1.73, "sc1": 1.73, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.73, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_28", "nome": "spazzoline elle", "prezzo": 1.96, "sc1": 1.96, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 1.96, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_29", "nome": "cappellino e guanti", "prezzo": 3.0, "sc1": 2.99, "sc2": 0, "sc3": 0, "motivo": "1 centesimo", "prezzoAltrove": 3.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_31", "nome": "scatolina portacarta", "prezzo": 0.98, "sc1": 0.98, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 0.98, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_33", "nome": "cappellino rosa giallo", "prezzo": 6.2, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 6.2, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_35", "nome": "12 rotoli metallizzati", "prezzo": 6.73, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 6.73, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_37", "nome": "ceppello basket", "prezzo": 1.99, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.99, "dove": "", "tipo": "sfizio", "categoria": ""}, {"id": "jan26_39", "nome": "monitor", "prezzo": 67.56, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 67.56, "dove": "amazon", "tipo": "utile", "categoria": ""}, {"id": "jan26_41", "nome": "ciotola regalo elena", "prezzo": 7.24, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 16.0, "dove": "amazon", "tipo": "utile", "categoria": ""}, {"id": "jan26_43", "nome": "luce tonda video", "prezzo": 17.47, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 17.47, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_44", "nome": "fori agendine", "prezzo": 7.72, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 7.72, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_46", "nome": "ferma tende", "prezzo": 0.98, "sc1": 1.94, "sc2": 0, "sc3": 0, "motivo": "credito e rimborso", "prezzoAltrove": 0.98, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_47", "nome": "anello cucire elena", "prezzo": 1.38, "sc1": 1.38, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.38, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_48", "nome": "ciotola VENDUTA", "prezzo": 6.73, "sc1": 16.0, "sc2": 0, "sc3": 0, "motivo": "venduta", "prezzoAltrove": 16.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "jan26_49", "nome": "maglione scacchi lilla", "prezzo": 19.43, "sc1": 8.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 19.43, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_51", "nome": "punteruolo", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_52", "nome": "lenzuolo bianco", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_53", "nome": "fogli trasferibili", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_55", "nome": "spazzolino arrampicat", "prezzo": 1.39, "sc1": 1.39, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.39, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_56", "nome": "tape carta", "prezzo": 1.77, "sc1": 1.77, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.77, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_57", "nome": "portapenne cricut", "prezzo": 2.17, "sc1": 2.17, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.17, "dove": "", "tipo": "", "categoria": ""}, {"id": "jan26_58", "nome": "tappetino verde", "prezzo": 1.78, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.78, "dove": "", "tipo": "", "categoria": ""}]}, "feb26": {"name": "Febbraio 2026", "items": [{"id": "feb26_3", "nome": "pianoforte", "prezzo": 87.0, "sc1": 27.6, "sc2": 0, "sc3": 0, "motivo": "amazon", "prezzoAltrove": 130.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "feb26_5", "nome": "orecchini fuxia", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_7", "nome": "caricabatterie", "prezzo": 4.7, "sc1": 4.7, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 9.11, "dove": "temu", "tipo": "", "categoria": ""}, {"id": "feb26_8", "nome": "tappentino cricut", "prezzo": 1.0, "sc1": 0.99, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 1.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_9", "nome": "sciarpa scacchi", "prezzo": 5.3, "sc1": 5.3, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.3, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_10", "nome": "calzascarpe", "prezzo": 0.87, "sc1": 0.87, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 0.87, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "feb26_12", "nome": "luci bici", "prezzo": 3.86, "sc1": 3.86, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.86, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "feb26_13", "nome": "luci bici elle", "prezzo": 3.29, "sc1": 3.29, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 3.29, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_15", "nome": "minioxford dictionary", "prezzo": 5.04, "sc1": 5.04, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.93, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "feb26_17", "nome": "calzini faccine", "prezzo": 4.66, "sc1": 4.65, "sc2": 0, "sc3": 0, "motivo": "1 cent", "prezzoAltrove": 4.66, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_18", "nome": "patafix", "prezzo": 1.66, "sc1": 5.65, "sc2": 0, "sc3": 0, "motivo": "sconto, 99 cents", "prezzoAltrove": 1.66, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_20", "nome": "cornici", "prezzo": 21.0, "sc1": 21.0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 21.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_21", "nome": "quadro papera", "prezzo": 2.9, "sc1": 2.9, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.9, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_22", "nome": "quadro best", "prezzo": 2.9, "sc1": 2.9, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.9, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_23", "nome": "quadro good things", "prezzo": 4.2, "sc1": 4.2, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.2, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_24", "nome": "matite", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_26", "nome": "calzini", "prezzo": 3.49, "sc1": 3.49, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 3.49, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_27", "nome": "impermeabile", "prezzo": 21.0, "sc1": 20.3, "sc2": 0, "sc3": 0, "motivo": "carta sconto", "prezzoAltrove": 21.0, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "feb26_28", "nome": "calzini antiscivolo elle", "prezzo": 4.39, "sc1": 4.39, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.39, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_29", "nome": "patafix", "prezzo": 2.11, "sc1": 2.11, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.11, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_31", "nome": "berretto Sergio", "prezzo": 3.34, "sc1": 3.34, "sc2": 0, "sc3": 0, "motivo": "1centesimo", "prezzoAltrove": 3.34, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_32", "nome": "orecchini diversi", "prezzo": 2.4, "sc1": 2.4, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 2.4, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_33", "nome": "orecchini fiore", "prezzo": 2.33, "sc1": 2.33, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.33, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_34", "nome": "orecchini verme", "prezzo": 2.15, "sc1": 2.15, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.15, "dove": "", "tipo": "", "categoria": ""}, {"id": "feb26_36", "nome": "colla legno", "prezzo": 2.79, "sc1": 2.79, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 2.79, "dove": "", "tipo": "utile", "categoria": ""}]}, "march26": {"name": "Marzo 2026", "items": [{"id": "march26_2", "nome": "sotto olio", "prezzo": 1.72, "sc1": 1.72, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.72, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "march26_3", "nome": "orecchini anguria", "prezzo": 0.97, "sc1": 0.97, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 0.97, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_4", "nome": "portascarpe", "prezzo": 1.69, "sc1": 1.69, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 1.69, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_5", "nome": "caricabatterie cuffie", "prezzo": 9.82, "sc1": 9.82, "sc2": 0, "sc3": 0, "motivo": "carta sconto;", "prezzoAltrove": 9.82, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_6", "nome": "ricarica 3", "prezzo": 4.95, "sc1": 4.95, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.95, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_7", "nome": "infradito", "prezzo": 5.61, "sc1": 7.0, "sc2": 0, "sc3": 0, "motivo": "sconto", "prezzoAltrove": 5.61, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "march26_8", "nome": "calzini", "prezzo": 4.27, "sc1": 0.4, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 4.27, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_10", "nome": "4holes puncher", "prezzo": 15.57, "sc1": 15.56, "sc2": 0, "sc3": 0, "motivo": "1cent", "prezzoAltrove": 15.57, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_11", "nome": "flaconi viaggio", "prezzo": 6.62, "sc1": 6.61, "sc2": 0, "sc3": 0, "motivo": "1cent", "prezzoAltrove": 6.62, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_13", "nome": "maglione gatto", "prezzo": 21.17, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 21.17, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_15", "nome": "pentola acciaio", "prezzo": 31.77, "sc1": 31.77, "sc2": 0, "sc3": 0, "motivo": "sconto; credito", "prezzoAltrove": 24.0, "dove": "amazon", "tipo": "utile", "categoria": ""}, {"id": "march26_17", "nome": "monopoli", "prezzo": 30.0, "sc1": 29.99, "sc2": 0, "sc3": 0, "motivo": "1cent", "prezzoAltrove": 29.0, "dove": "amazon", "tipo": "", "categoria": ""}, {"id": "march26_18", "nome": "spugnette", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": null, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "march26_20", "nome": "maglione marrone", "prezzo": 13.76, "sc1": 13.76, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 13.76, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_21", "nome": "maglione rosa azz", "prezzo": 16.41, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 16.41, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_22", "nome": "maglione aperto bianco", "prezzo": 14.11, "sc1": 14.11, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 14.11, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_23", "nome": "maglione aperto bianco", "prezzo": 14.89, "sc1": 14.89, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 14.89, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_24", "nome": "maglione aperto verde", "prezzo": 11.11, "sc1": 11.11, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 11.11, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_25", "nome": "maglione rosa lilla giallo", "prezzo": 15.07, "sc1": 15.07, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 15.07, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_26", "nome": "maglia estiva colorata", "prezzo": 19.14, "sc1": 19.14, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 19.14, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_28", "nome": "borsone", "prezzo": 24.5, "sc1": 24.49, "sc2": 0, "sc3": 0, "motivo": "1cent", "prezzoAltrove": 24.5, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "march26_30", "nome": "cappellino blu", "prezzo": 1.55, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.55, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_31", "nome": "guanti verdi", "prezzo": 4.32, "sc1": 4.32, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 4.32, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "march26_34", "nome": "citadel", "prezzo": 3.56, "sc1": 3.56, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.56, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_35", "nome": "cariabatterie", "prezzo": 10.52, "sc1": 10.51, "sc2": 0, "sc3": 0, "motivo": "1cent", "prezzoAltrove": 10.52, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_36", "nome": "gotown", "prezzo": 3.12, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.12, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_37", "nome": "sospetto", "prezzo": 4.1, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.1, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_38", "nome": "penne piccole", "prezzo": 3.4, "sc1": 3.4, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 3.4, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_39", "nome": "divisori raccoglitore", "prezzo": 3.13, "sc1": 3.13, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": 3.13, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_40", "nome": "maglione pile verde", "prezzo": 21.11, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 21.11, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_42", "nome": "aspirapolvere tavolo", "prezzo": 5.09, "sc1": 3.83, "sc2": 0, "sc3": 0, "motivo": "credito", "prezzoAltrove": 5.09, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_43", "nome": "portasapone cucina", "prezzo": 2.41, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.41, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_44", "nome": "postits", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_45", "nome": "tape", "prezzo": 1.76, "sc1": 1.76, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": 1.76, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_46", "nome": "spazzola", "prezzo": 4.0, "sc1": 4.0, "sc2": 0, "sc3": 0, "motivo": "regalo", "prezzoAltrove": 4.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_47", "nome": "chiavetta viola", "prezzo": 5.81, "sc1": 5.81, "sc2": 0, "sc3": 0, "motivo": "rimborso", "prezzoAltrove": 5.81, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_48", "nome": "pins colorate", "prezzo": 3.86, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.86, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_50", "nome": "pantaloni zampa", "prezzo": 27.07, "sc1": 27.07, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 27.07, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_51", "nome": "pantaloncini verdi", "prezzo": 13.55, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 13.55, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_53", "nome": "vaso balcone", "prezzo": 2.75, "sc1": 0.06, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.75, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_54", "nome": "vaso auto irr", "prezzo": 7.09, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 7.09, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_56", "nome": "tuta nera corti", "prezzo": 8.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_57", "nome": "tuta nera2", "prezzo": 14.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 14.0, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_58", "nome": "tuta lilla", "prezzo": 11.33, "sc1": 11.33, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 11.33, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_59", "nome": "tuta celeste", "prezzo": 8.95, "sc1": 1.5, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 8.95, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_61", "nome": "maglietta bianca", "prezzo": 4.82, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.82, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_62", "nome": "maglietta bianca M", "prezzo": 6.35, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 6.35, "dove": "", "tipo": "utile", "categoria": ""}, {"id": "march26_63", "nome": "maglietta rossa", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_65", "nome": "copricapelli doccia", "prezzo": 0.0, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": null, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_66", "nome": "ciabatte", "prezzo": 4.92, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 4.92, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_67", "nome": "cappello marrone falda", "prezzo": 6.56, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 6.56, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_68", "nome": "collant casetta", "prezzo": 3.18, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.18, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_70", "nome": "cacciaviti pc", "prezzo": 5.25, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 5.25, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_71", "nome": "penne nere 30", "prezzo": 10.34, "sc1": 10.34, "sc2": 0, "sc3": 0, "motivo": "regalo!", "prezzoAltrove": 10.34, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_73", "nome": "perline interno colorato 1", "prezzo": 1.96, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.96, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_74", "nome": "perline interno colorato", "prezzo": 2.39, "sc1": 2.39, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.39, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_75", "nome": "perline piccole scatola", "prezzo": 2.77, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.77, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_76", "nome": "perline tonde 60", "prezzo": 3.17, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 3.17, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_77", "nome": "perline acriliche", "prezzo": 1.44, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.44, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_78", "nome": "perline acriliche 40g", "prezzo": 2.39, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 2.39, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_79", "nome": "perline piccole1 oz", "prezzo": 1.02, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 1.02, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_80", "nome": "parrucca bianca", "prezzo": 10.91, "sc1": 0, "sc2": 0, "sc3": 0, "motivo": "", "prezzoAltrove": 10.91, "dove": "", "tipo": "", "categoria": ""}, {"id": "march26_82", "nome": "mouse", "prezzo": 15.86, "sc1": 15.86, "sc2": 0, "sc3": 0, "motivo": "regalo!", "prezzoAltrove": 15.86, "dove": "", "tipo": "utile", "categoria": ""}]}}
-;
+// ── FIREBASE CONFIG ──
+const firebaseConfig = {
+  apiKey: "AIzaSyC43SHBsYy2d7mwcP5ABTt2gNTfh7C3lSg",
+  authDomain: "temu-tracker-3d245.firebaseapp.com",
+  projectId: "temu-tracker-3d245",
+  storageBucket: "temu-tracker-3d245.firebasestorage.app",
+  messagingSenderId: "164104135326",
+  appId: "1:164104135326:web:ad96f2becdeb6a6ab4d18f"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+const provider = new firebase.auth.GoogleAuthProvider();
+
+let currentUser = null;
+
+// ── AUTH ──
+function signInWithGoogle(){
+  auth.signInWithPopup(provider).catch(e=>toast('Errore login: '+e.message));
+}
+function signOut(){
+  if(!confirm("Uscire dall'account?")) return;
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(async user => {
+  if(user){
+    currentUser = user;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-loading').classList.remove('hidden');
+    document.getElementById('app').style.display='block';
+    // Fill user chip
+    document.getElementById('user-avatar').src = user.photoURL||'';
+    document.getElementById('user-name').textContent = user.displayName?.split(' ')[0]||user.email;
+    // Load data from Firestore
+    await loadFromFirestore();
+    document.getElementById('app-loading').classList.add('hidden');
+    render();
+  } else {
+    currentUser = null;
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app-loading').classList.add('hidden');
+    document.getElementById('app').style.display='none';
+  }
+});
+
+// ── FIRESTORE SAVE/LOAD ──
+let _saveTimer = null;
+function setSyncDot(state){ // 'saving' | 'saved' | 'error'
+  const d=document.getElementById('sync-dot');
+  if(!d)return;
+  d.className='sync-dot'+(state==='saved'?' saved':state==='saving'?' saving':'');
+  d.title=state==='saved'?'Salvato':state==='saving'?'Salvataggio…':'Errore salvataggio';
+}
+
+async function loadFromFirestore(){
+  if(!currentUser) return;
+  try{
+    const doc = await db.collection('users').doc(currentUser.uid).collection('tracker').doc('state').get();
+    if(doc.exists){
+      const data = doc.data();
+      S = data;
+      // Ensure int keys for years/months (Firestore stores them as strings)
+      const fixedYears={};
+      Object.entries(S.years||{}).forEach(([y,ms])=>{
+        fixedYears[+y]={};
+        Object.entries(ms).forEach(([m,mo])=>{ fixedYears[+y][+m]=mo; });
+      });
+      S.years=fixedYears;
+    } else {
+      // First login — build empty calendar
+      S = buildCalendar();
+    }
+  } catch(e){
+    console.error('Load error',e);
+    S = buildCalendar();
+    toast('Errore caricamento dati 😕');
+  }
+}
+
+function save(){
+  setSyncDot('saving');
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async ()=>{
+    try{
+      if(currentUser){
+        // Salva su Firestore se loggato
+        const toStore = JSON.parse(JSON.stringify(S));
+        const strYears={};
+        Object.entries(toStore.years||{}).forEach(([y,ms])=>{
+          strYears[String(y)]={};
+          Object.entries(ms).forEach(([m,mo])=>{ strYears[String(y)][String(m)]=mo; });
+        });
+        toStore.years=strYears;
+        await db.collection('users').doc(currentUser.uid).collection('tracker').doc('state').set(toStore);
+      } else {
+        // Fallback a localStorage se non loggato
+        localStorage.setItem(KEY,JSON.stringify(S));
+      }
+      setSyncDot('saved');
+    } catch(e){
+      console.error('Save error',e);
+      setSyncDot('error');
+      toast('Errore salvataggio ⚠️');
+    }
+  }, 1200);
+}
+
+// ── SEED IMPORT ──
+let _pendingSeed = null;
+
+function showSeedModal(){
+  _pendingSeed=null;
+  document.getElementById('seed-preview').style.display='none';
+  document.getElementById('import-confirm-btn').style.display='none';
+  document.getElementById('seed-file-input').value='';
+  openModal('seed-modal-overlay');
+}
+function handleSeedDrop(e){
+  e.preventDefault();
+  document.getElementById('seed-drop-zone').classList.remove('dragover');
+  const file=e.dataTransfer.files[0];
+  if(file) handleSeedFile(file);
+}
+function handleSeedFile(file){
+  if(!file||!file.name.endsWith('.json')){toast('Seleziona un file .json ⚠️');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.years||!data.categories){toast('File seed non valido ⚠️');return;}
+      _pendingSeed=data;
+      // Count items
+      let total=0;
+      Object.values(data.years).forEach(ms=>Object.values(ms).forEach(mo=>{total+=(mo.items||[]).length;}));
+      const prev=document.getElementById('seed-preview');
+      prev.style.display='block';
+      prev.innerHTML=`✅ File valido — <strong>${total} articoli</strong> pronti per l'importazione in ${Object.keys(data.years).length} anni`;
+      document.getElementById('import-confirm-btn').style.display='inline-flex';
+    }catch(err){toast('Errore lettura file ⚠️');}
+  };
+  reader.readAsText(file);
+}
+function confirmImport(){
+  if(!_pendingSeed)return;
+  // Merge: add items from seed into S.years, skip if id already exists
+  const existingIds=new Set();
+  Object.values(S.years).forEach(ms=>Object.values(ms).forEach(mo=>(mo.items||[]).forEach(i=>existingIds.add(i.id))));
+
+  let added=0;
+  Object.entries(_pendingSeed.years).forEach(([yStr,ms])=>{
+    const y=+yStr;
+    if(!S.years[y]){S.years[y]={};for(let m=1;m<=12;m++)S.years[y][m]={name:MONTHS_IT[m-1]+' '+y,items:[]};}
+    Object.entries(ms).forEach(([mStr,mo])=>{
+      const m=+mStr;
+      if(!S.years[y][m]) S.years[y][m]={name:mo.name||MONTHS_IT[m-1]+' '+y,items:[]};
+      (mo.items||[]).forEach(it=>{
+        if(!existingIds.has(it.id)){
+          S.years[y][m].items.push(it);
+          existingIds.add(it.id);
+          added++;
+        }
+      });
+    });
+  });
+  // Merge categories
+  (_pendingSeed.categories||[]).forEach(c=>{if(!S.categories.includes(c))S.categories.push(c);});
+  save(); closeModal('seed-modal-overlay'); render();
+  toast(`✅ Importati ${added} articoli!`);
+}
+
 const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                  'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const SEED_MAP={
@@ -348,12 +715,17 @@ function buildCalendar(){
   });
   yrs.forEach(y=>{for(let m=1;m<=12;m++)if(!years[y][m])years[y][m]={name:MONTHS_IT[m-1]+' '+y,items:[]};});
   return{years,categories:['Casa','Moda','Cancelleria','Regalo','Tech','Hobby','Sport','Cibo','Altro'],
-         currentYear:curY,currentMonth:now.getMonth()+1,filterTipo:'',filterCat:'',sortBy:'order'};
+         currentYear:curY,currentMonth:now.getMonth()+1,filterTipo:'',filterCat:'',sortBy:'order',catCardSel:''};
 }
 
 let S;
-function load(){try{const d=localStorage.getItem(KEY);if(d){S=JSON.parse(d);return;}}catch(e){}S=buildCalendar();}
-function save(){localStorage.setItem(KEY,JSON.stringify(S));}
+
+function load(){
+  if(!currentUser) {
+    try{const d=localStorage.getItem(KEY);if(d){S=JSON.parse(d);return;}}catch(e){}
+    S=buildCalendar();
+  }
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
 function getItem(id){
@@ -468,12 +840,43 @@ function renderMain(){
       });
     }else rows=items.map(itemRow).join('');
     tableInner=`<table><thead><tr>
+      <th title="Da restituire">↩</th>
       <th>Tipo</th><th>Categoria</th><th>Prodotto</th>
       <th>Prezzo</th><th>Sc.1</th><th>Sc.2</th><th>Sc.3</th>
       <th>Motivo</th><th>Totale</th>
       <th>P.altrove</th><th>Dove</th><th>Risparmio</th><th></th>
     </tr></thead><tbody>${rows}</tbody></table>`;
   }
+
+  // ── Compute return & category cards ──
+  const retItems = allItems.filter(i=>i.daRestituire);
+  const totSenzaReso = allItems.filter(i=>!i.daRestituire).reduce((a,i)=>a+totale(i),0);
+  const catSel = S.catCardSel||'';
+  const catItems = allItems.filter(i=>i.categoria===catSel&&catSel);
+  const catSpesa = catItems.reduce((a,i)=>a+totale(i),0);
+
+  const infoCardsHTML = `<div class="info-cards">
+    <div class="info-card return-card">
+      <div class="ic-icon">↩</div>
+      <div class="ic-body">
+        <div class="ic-lbl">Netto (esclusi resi)</div>
+        <div class="ic-val">${eur(totSenzaReso)}</div>
+        <div class="ic-sub">${retItems.length ? retItems.length+' art. da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili' : 'Nessun articolo da restituire'}</div>
+      </div>
+    </div>
+    <div class="info-card cat-card">
+      <div class="ic-icon">🏷️</div>
+      <div class="ic-body">
+        <div class="ic-lbl">Spesa per categoria</div>
+        <div class="ic-val">${catSel ? eur(catSpesa) : '—'}</div>
+        <div class="ic-sub">${catSel ? catItems.length+' articoli in "'+catSel+'"' : 'Seleziona una categoria'}</div>
+        <select class="cat-select" onchange="S.catCardSel=this.value;save();renderMain()">
+          <option value="">— Scegli categoria —</option>
+          ${S.categories.map(c=>`<option value="${c}" ${c===catSel?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  </div>`;
 
   main.innerHTML=`<div class="month-content">
     ${avgHTML}
@@ -484,6 +887,7 @@ function renderMain(){
       <div class="stat-card c2"><div class="lbl">✨ Utili</div><div class="val">${st.utili}</div><div class="sub">${eur(st.spesaUtile)}</div></div>
       <div class="stat-card c4"><div class="lbl">🍬 Sfizi</div><div class="val">${st.sfizi}</div><div class="sub">${eur(st.spesaSfizio)}</div></div>
     </div>
+    ${infoCardsHTML}
     <div class="toolbar">
       <button class="btn btn-p" onclick="showAddItem()">+ Articolo</button>
       <select class="fs" onchange="S.filterTipo=this.value;save();renderMain()">
@@ -523,12 +927,15 @@ function itemRow(it){
     :`<span class="muted" style="font-size:10px">—</span>`;
   const scEl=v=>v?`<span class="num neg">-${eur(v)}</span>`:`<span class="muted">—</span>`;
   const rispEl=risp!==0?`<span class="num ${risp>=0?'pos':'neg'}">${eur(risp)}</span>`:`<span class="muted">—</span>`;
+  const ec=(field,type,displayVal)=>
+    `<td><div class="cell" onclick="inlineEdit(this,'${it.id}','${field}','${type}')" title="Clicca per modificare">${displayVal}</div></td>`;
+  const retCls = it.daRestituire ? 'da-restituire' : '';
 
-  // Editable cell helpers
-  const ec=(field,type,displayVal,extra='')=>
-    `<td><div class="cell" onclick="inlineEdit(this,'${it.id}','${field}','${type}')" title="Clicca per modificare" ${extra}>${displayVal}</div></td>`;
-
-  return`<tr data-id="${it.id}">
+  return`<tr data-id="${it.id}" class="${retCls}">
+    <td><div class="cell-ro" style="justify-content:center">
+      <input type="checkbox" class="ret-check" ${it.daRestituire?'checked':''}
+        onchange="toggleReturn('${it.id}',this.checked)" title="Da restituire">
+    </div></td>
     <td><div class="cell-ro">${tipoBadge}</div></td>
     <td><div class="cell" onclick="inlineCat(this,'${it.id}')" title="Clicca per modificare">${catBadge}</div></td>
     ${ec('nome','text',`<strong>${esc(it.nome)}</strong>`)}
@@ -691,6 +1098,25 @@ function toggleTipo(id){
   const tr=document.querySelector(`tr[data-id="${id}"]`);
   if(tr){const nb=document.createElement('tbody');nb.innerHTML=itemRow(it);tr.parentNode.replaceChild(nb.firstChild,tr);}
 }
+function toggleReturn(id, checked){
+  const it=getItem(id);if(!it)return;
+  it.daRestituire=checked;save();
+  // update row class immediately
+  const tr=document.querySelector(`tr[data-id="${id}"]`);
+  if(tr)tr.className=checked?'da-restituire':'';
+  // refresh the info cards only
+  const mo=S.years[S.currentYear]?.[S.currentMonth];
+  const allItems=(mo?.items||[]).filter(i=>i.nome?.trim());
+  const retItems=allItems.filter(i=>i.daRestituire);
+  const totNetto=allItems.filter(i=>!i.daRestituire).reduce((a,i)=>a+totale(i),0);
+  const rc=document.querySelector('.return-card');
+  if(rc){
+    rc.querySelector('.ic-val').textContent=eur(totNetto);
+    rc.querySelector('.ic-sub').textContent=retItems.length
+      ?retItems.length+' art. da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili'
+      :'Nessun articolo da restituire';
+  }
+}
 function updateComputed(){
   const p=parseFloat(document.getElementById('f-prezzo').value)||0;
   const s1=parseFloat(document.getElementById('f-sc1').value)||0;
@@ -727,11 +1153,29 @@ let _t;function toast(msg){const t=document.getElementById('toast');t.textConten
 document.addEventListener('keydown',e=>{if(e.key==='Escape')['item-modal-overlay','cat-modal-overlay'].forEach(closeModal);});
 
 // ── INIT ──
-load();
 const _now=new Date();
-if(!S.currentYear)S.currentYear=_now.getFullYear();
-if(!S.currentMonth)S.currentMonth=_now.getMonth()+1;
-render();
+// S is initialized by Firestore load in auth listener
+
+// Override renderMain toolbar to add seed import button
+const _origRenderMain = renderMain;
+
+// Patch: add "Importa seed" to toolbar — injected after toolbar renders
+const _origRender = render;
+render = function(){
+  _origRender();
+  // Inject seed import btn into toolbar if not present
+  const tb = document.querySelector('.toolbar');
+  if(tb && !document.getElementById('seed-import-btn')){
+    const btn = document.createElement('button');
+    btn.id='seed-import-btn';
+    btn.className='btn btn-s';
+    btn.innerHTML='📥 Importa seed';
+    btn.onclick=showSeedModal;
+    btn.style.marginLeft='8px';
+    tb.appendChild(btn);
+  }
+};
+
 </script>
 </body>
 </html>
