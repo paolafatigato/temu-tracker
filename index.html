@@ -276,10 +276,16 @@ tbody tr.da-restituire td .cell, tbody tr.da-restituire td .cell-ro{
 }
 tbody tr.da-restituire .tipo-badge, tbody tr.da-restituire .cat-badge,
 tbody tr.da-restituire .num, tbody tr.da-restituire strong{opacity:.5}
-tbody tr.reso{opacity:.4;background:#efefef}
-tbody tr.reso td .cell, tbody tr.reso td .cell-ro{
-  text-decoration:line-through;color:#999;pointer-events:none
-}
+/* ── RESO SECTION ── */
+.reso-section{margin-top:24px}
+.reso-sep{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.reso-sep-line{flex:1;height:1px;background:#ddd}
+.reso-sep-label{font-size:9px;text-transform:uppercase;letter-spacing:1.4px;font-weight:700;color:#aaa;white-space:nowrap}
+.reso-wrapper thead th{background:#aaa!important;color:rgba(255,255,255,.8)!important}
+.reso-section tbody tr{background:#f5f5f5;cursor:pointer;transition:background .12s}
+.reso-section tbody tr:hover{background:#e8e8e8}
+.reso-section tbody tr td .cell-ro{text-decoration:line-through;color:#aaa}
+.reso-section tbody tr td .cell-ro strong,.reso-section tbody tr td .cell-ro .num{color:#aaa;font-weight:500}
 
 /* ── INFO CARDS (return + cat) ── */
 .info-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
@@ -715,7 +721,7 @@ function eur(n){if(n===null||n===undefined||isNaN(n))return'—';return'€\u00A
 // ── STATS ──
 function mStats(y,m){
   const mo=S.years[y]?.[m];if(!mo)return{};
-  const items=(mo.items||[]).filter(i=>i.nome?.trim());
+  const items=(mo.items||[]).filter(i=>i.nome?.trim()&&!i.reso);
   const ts=items.reduce((a,i)=>a+totale(i),0);
   const tr=items.reduce((a,i)=>a+risparmio(i),0);
   const utili=items.filter(i=>i.tipo==='utile'),sfizi=items.filter(i=>i.tipo==='sfizio'),regali=items.filter(i=>i.tipo==='regali');
@@ -731,7 +737,7 @@ function mStats(y,m){
 function globalStats(){
   let ts=0,tr=0,cnt=0;
   Object.values(S.years).forEach(ms=>Object.values(ms).forEach(mo=>{
-    const items=(mo.items||[]).filter(i=>i.nome?.trim());
+    const items=(mo.items||[]).filter(i=>i.nome?.trim()&&!i.reso);
     if(items.length){ts+=items.reduce((a,i)=>a+totale(i),0);tr+=items.reduce((a,i)=>a+risparmio(i),0);cnt++;}
   }));
   return{totS:ts,totR:tr,media:cnt?ts/cnt:0};
@@ -778,7 +784,8 @@ function renderMain(){
   }
   const st=mStats(S.currentYear,S.currentMonth);
   const allItems=(mo.items||[]).filter(i=>i.nome?.trim());
-  let items=[...allItems];
+  const activeItems=allItems.filter(i=>!i.reso);
+  let items=[...activeItems];
   if(S.filterTipo)items=items.filter(i=>i.tipo===S.filterTipo);
   if(S.filterCat) items=items.filter(i=>i.categoria===S.filterCat);
   if(S.sortBy==='cat')      items.sort((a,b)=>(a.categoria||'').localeCompare(b.categoria||''));
@@ -801,9 +808,9 @@ function renderMain(){
 
   let tableInner='';
   if(!items.length){
-    tableInner=`<div class="empty-state"><div class="ico">${allItems.length?'🔍':'📦'}</div>
-      <h3>${allItems.length?'Nessun risultato con i filtri attivi':'Nessun articolo ancora'}</h3>
-      <p style="font-size:12px">${allItems.length?'Cambia i filtri.':'Clicca "+ Articolo"!'}</p></div>`;
+    tableInner=`<div class="empty-state"><div class="ico">${activeItems.length?'🔍':'📦'}</div>
+      <h3>${activeItems.length?'Nessun risultato con i filtri attivi':'Nessun articolo ancora'}</h3>
+      <p style="font-size:12px">${activeItems.length?'Cambia i filtri.':'Clicca "+ Articolo"!'}</p></div>`;
   } else {
     let rows='';
     if(S.sortBy==='cat'){
@@ -823,11 +830,31 @@ function renderMain(){
   }
 
   // ── Compute return & category cards ──
-  const retItems = allItems.filter(i=>i.daRestituire);
-  const totSenzaReso = allItems.filter(i=>!i.daRestituire).reduce((a,i)=>a+totale(i),0);
+  const resoItems = allItems.filter(i=>i.reso);
+  const retItems = allItems.filter(i=>i.daRestituire&&!i.reso);
+  const totSenzaReso = allItems.filter(i=>!i.daRestituire&&!i.reso).reduce((a,i)=>a+totale(i),0);
   const catSel = S.catCardSel||'';
   const catItems = allItems.filter(i=>i.categoria===catSel&&catSel);
   const catSpesa = catItems.reduce((a,i)=>a+totale(i),0);
+  const resoTot = resoItems.reduce((a,i)=>a+totale(i),0);
+  const resoTableHTML = resoItems.length ? `
+    <div class="reso-section">
+      <div class="reso-sep">
+        <div class="reso-sep-line"></div>
+        <div class="reso-sep-label">↩ Resi (${resoItems.length}) · ${eur(resoTot)} recuperati — clicca un articolo per annullare</div>
+        <div class="reso-sep-line"></div>
+      </div>
+      <div class="table-wrapper reso-wrapper">
+        <table><thead><tr>
+          <th>↩</th><th>Tipo</th><th>Categoria</th><th>Prodotto</th>
+          <th>Prezzo</th><th>Sc.1</th><th>Sc.2</th><th>Sc.3</th>
+          <th>Motivo</th><th>Totale</th>
+          <th>P.altrove</th><th>Dove</th><th>Risparmio</th><th></th>
+        </tr></thead>
+        <tbody>${resoItems.map(resoItemRow).join('')}</tbody>
+        </table>
+      </div>
+    </div>` : '';
 
   const infoCardsHTML = `<div class="info-cards">
     <div class="info-card return-card">
@@ -835,8 +862,8 @@ function renderMain(){
       <div class="ic-body">
         <div class="ic-lbl">Netto (esclusi resi)</div>
         <div class="ic-val">${eur(totSenzaReso)}</div>
-        <div class="ic-sub">${retItems.length ? retItems.length+' art. da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili' : 'Nessun articolo da restituire'}</div>
-        ${retItems.length ? `<button class="ic-btn" onclick="acceptReturns()" title="Accetta e grigia tutti i resi">Accetta resi</button>` : ''}
+        <div class="ic-sub">${retItems.length ? retItems.length+' da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili' : resoItems.length ? resoItems.length+' già restituiti · '+eur(resoTot) : 'Nessun articolo da restituire'}</div>
+        ${retItems.length ? `<button class="ic-btn" onclick="acceptReturns()" title="Sposta i resi in fondo e scorporali dal totale">Accetta resi</button>` : ''}
       </div>
     </div>
     <div class="info-card cat-card">
@@ -887,6 +914,7 @@ function renderMain(){
       <button class="btn btn-s" style="margin-left:auto" onclick="showCatModal()">🏷️ Categorie</button>
     </div>
     <div class="table-wrapper">${tableInner}</div>
+    ${resoTableHTML}
   </div>`;
 }
 
@@ -909,9 +937,8 @@ function itemRow(it){
   const ec=(field,type,displayVal)=>
     `<td><div class="cell" onclick="inlineEdit(this,'${it.id}','${field}','${type}')" title="Clicca per modificare">${displayVal}</div></td>`;
   const retCls = it.daRestituire ? 'da-restituire' : '';
-  const resoCls = it.reso ? 'reso' : '';
 
-  return`<tr data-id="${it.id}" class="${retCls} ${resoCls}">
+  return`<tr data-id="${it.id}" class="${retCls}">
     <td><div class="cell-ro" style="justify-content:center">
       <input type="checkbox" class="ret-check" ${it.daRestituire?'checked':''}
         onchange="toggleReturn('${it.id}',this.checked)" title="Da restituire">
@@ -1087,13 +1114,13 @@ function toggleReturn(id, checked){
   // refresh the info cards only
   const mo=S.years[S.currentYear]?.[S.currentMonth];
   const allItems=(mo?.items||[]).filter(i=>i.nome?.trim());
-  const retItems=allItems.filter(i=>i.daRestituire);
-  const totNetto=allItems.filter(i=>!i.daRestituire).reduce((a,i)=>a+totale(i),0);
+  const retItems=allItems.filter(i=>i.daRestituire&&!i.reso);
+  const totNetto=allItems.filter(i=>!i.daRestituire&&!i.reso).reduce((a,i)=>a+totale(i),0);
   const rc=document.querySelector('.return-card');
   if(rc){
     rc.querySelector('.ic-val').textContent=eur(totNetto);
     rc.querySelector('.ic-sub').textContent=retItems.length
-      ?retItems.length+' art. da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili'
+      ?retItems.length+' da restituire · '+eur(retItems.reduce((a,i)=>a+totale(i),0))+' recuperabili'
       :'Nessun articolo da restituire';
   }
 }
@@ -1102,8 +1129,44 @@ function acceptReturns(){
   const allItems=(mo?.items||[]).filter(i=>i.nome?.trim());
   const retItems=allItems.filter(i=>i.daRestituire&&!i.reso);
   if(!retItems.length){toast('Nessun articolo da restituire');return;}
-  if(!confirm(`Contrassegnare ${retItems.length} articoli come "reso"? Verranno visualizzati in grigio.`))return;
-  retItems.forEach(it=>it.reso=true);save();render();toast('Resi accettati ✓');
+  retItems.forEach(it=>{it.reso=true;it.daRestituire=false;});
+  save();render();toast(retItems.length+' resi spostati in fondo ✓');
+}
+function resoItemRow(it){
+  const tot=totale(it),risp=risparmio(it);
+  const altVal=(it.prezzoAltrove!==null&&it.prezzoAltrove!==undefined&&it.prezzoAltrove!=='') ?+it.prezzoAltrove:null;
+  const tipoBadge=it.tipo==='utile'?`<span class="tipo-badge utile">✨ Utile</span>`
+    :it.tipo==='sfizio'?`<span class="tipo-badge sfizio">🍬 Sfizio</span>`
+    :it.tipo==='regali'?`<span class="tipo-badge regali">🎁 Regali</span>`
+    :`<span class="tipo-badge nessuno">—</span>`;
+  const ci=S.categories.indexOf(it.categoria||''),cc=CAT_COLORS[ci>=0?ci%CAT_COLORS.length:9];
+  const catBadge=it.categoria
+    ?`<span class="cat-badge" style="background:${cc}22;color:${cc};border:1px solid ${cc}55">${esc(it.categoria)}</span>`
+    :`<span class="muted" style="font-size:10px">—</span>`;
+  const scEl=v=>v?`<span class="num">-${eur(v)}</span>`:`<span class="muted">—</span>`;
+  const rispEl=risp!==0?`<span class="num">${eur(risp)}</span>`:`<span class="muted">—</span>`;
+  const ro=val=>`<td><div class="cell-ro">${val}</div></td>`;
+  return`<tr data-id="${it.id}" title="Clicca per annullare il reso" onclick="undoReso('${it.id}')">
+    <td><div class="cell-ro" style="justify-content:center;font-size:15px;opacity:.4">↩</div></td>
+    <td><div class="cell-ro">${tipoBadge}</div></td>
+    <td><div class="cell-ro">${catBadge}</div></td>
+    ${ro(`<strong>${esc(it.nome)}</strong>`)}
+    ${ro(`<span class="num">${eur(it.prezzo||0)}</span>`)}
+    ${ro(scEl(it.sc1))}${ro(scEl(it.sc2))}${ro(scEl(it.sc3))}
+    ${ro(`<span style="font-size:11px">${esc(it.motivo||'')}</span>`)}
+    ${ro(`<strong class="num">${eur(tot)}</strong>`)}
+    ${ro(altVal!==null?`<span class="num">${eur(altVal)}</span>`:`<span class="muted">—</span>`)}
+    ${ro(`<span style="font-size:11px">${esc(it.dove||'')}</span>`)}
+    ${ro(rispEl)}
+    <td><div class="cell-ro" style="gap:2px">
+      <button class="action-btn del" onclick="event.stopPropagation();delItem('${it.id}')" title="Elimina">🗑️</button>
+    </div></td>
+  </tr>`;
+}
+function undoReso(id){
+  const it=getItem(id);if(!it)return;
+  it.reso=false;it.daRestituire=false;
+  save();render();toast('Reso annullato ✓');
 }
 function updateComputed(){
   const p=parseFloat(document.getElementById('f-prezzo').value)||0;
