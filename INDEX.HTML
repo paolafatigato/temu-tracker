@@ -580,7 +580,13 @@ function setSyncDot(state){ // 'saving' | 'saved' | 'error'
 async function loadFromFirestore(){
   if(!currentUser) return;
   try{
-    const doc = await db.collection('users').doc(currentUser.uid).collection('tracker').doc('state').get();
+    // Set a timeout of 5 seconds for Firebase query
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Firestore timeout')), 5000)
+    );
+    const queryPromise = db.collection('users').doc(currentUser.uid).collection('tracker').doc('state').get();
+    const doc = await Promise.race([queryPromise, timeoutPromise]);
+    
     if(doc.exists){
       const data = doc.data();
       S = data;
@@ -592,13 +598,15 @@ async function loadFromFirestore(){
       });
       S.years=fixedYears;
     } else {
-      // First login — build empty calendar
-      S = buildCalendar();
+      // First login — use already initialized S or rebuild
+      if(!S) S = buildCalendar();
     }
   } catch(e){
     console.error('Load error',e);
-    S = buildCalendar();
-    toast('Errore caricamento dati 😕');
+    // Use existing S or rebuild
+    if(!S) S = buildCalendar();
+    // Only show toast if it's a real error, not timeout
+    if(e.message !== 'Firestore timeout') toast('Errore caricamento dati 😕');
   }
 }
 
@@ -708,11 +716,6 @@ function buildCalendar(){
   const yrs=[...new Set([2025,curY,curY<2026?2026:curY+1])].sort();
   const years={};
   yrs.forEach(y=>{years[y]={};});
-  Object.entries(SEED_MAP).forEach(([sheet,{y,m}])=>{
-    if(!years[y])years[y]={};
-    const sd=SEED[sheet];
-    years[y][m]={name:sd.name,items:sd.items.map(i=>({...i}))};
-  });
   yrs.forEach(y=>{for(let m=1;m<=12;m++)if(!years[y][m])years[y][m]={name:MONTHS_IT[m-1]+' '+y,items:[]};});
   return{years,categories:['Casa','Moda','Cancelleria','Regalo','Tech','Hobby','Sport','Cibo','Altro'],
          currentYear:curY,currentMonth:now.getMonth()+1,filterTipo:'',filterCat:'',sortBy:'order',catCardSel:''};
@@ -720,12 +723,19 @@ function buildCalendar(){
 
 let S;
 
-function load(){
-  if(!currentUser) {
-    try{const d=localStorage.getItem(KEY);if(d){S=JSON.parse(d);return;}}catch(e){}
+// Initialize S immediately with default
+function initializeState(){
+  try{
+    const d=localStorage.getItem(KEY);
+    if(d){S=JSON.parse(d);}
+    else{S=buildCalendar();}
+  }catch(e){
     S=buildCalendar();
   }
 }
+
+// Call on page load BEFORE any async operations
+initializeState();
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 
 function getItem(id){
