@@ -580,12 +580,10 @@ function setSyncDot(state){ // 'saving' | 'saved' | 'error'
 async function loadFromFirestore(){
   if(!currentUser) return;
   try{
-    // Set a timeout of 5 seconds for Firebase query
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Firestore timeout')), 5000)
-    );
+    // Force token refresh to ensure Firestore gets a valid auth token
+    await currentUser.getIdToken(true);
     const queryPromise = db.collection('users').doc(currentUser.uid).collection('tracker').doc('state').get();
-    const doc = await Promise.race([queryPromise, timeoutPromise]);
+    const doc = await queryPromise;
     
     if(doc.exists){
       const data = doc.data();
@@ -603,10 +601,8 @@ async function loadFromFirestore(){
     }
   } catch(e){
     console.error('Load error',e);
-    // Use existing S or rebuild
     if(!S) S = buildCalendar();
-    // Only show toast if it's a real error, not timeout
-    if(e.message !== 'Firestore timeout') toast('Errore caricamento dati 😕');
+    toast('Errore caricamento dati 😕 (' + e.code + ')');
   }
 }
 
