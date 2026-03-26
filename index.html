@@ -634,68 +634,12 @@ function save(){
   }, 1200);
 }
 
-// ── SEED IMPORT ──
-let _pendingSeed = null;
-
-function showSeedModal(){
-  _pendingSeed=null;
-  document.getElementById('seed-preview').style.display='none';
-  document.getElementById('import-confirm-btn').style.display='none';
-  document.getElementById('seed-file-input').value='';
-  openModal('seed-modal-overlay');
-}
-function handleSeedDrop(e){
-  e.preventDefault();
-  document.getElementById('seed-drop-zone').classList.remove('dragover');
-  const file=e.dataTransfer.files[0];
-  if(file) handleSeedFile(file);
-}
-function handleSeedFile(file){
-  if(!file||!file.name.endsWith('.json')){toast('Seleziona un file .json ⚠️');return;}
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const data=JSON.parse(e.target.result);
-      if(!data.years||!data.categories){toast('File seed non valido ⚠️');return;}
-      _pendingSeed=data;
-      // Count items
-      let total=0;
-      Object.values(data.years).forEach(ms=>Object.values(ms).forEach(mo=>{total+=(mo.items||[]).length;}));
-      const prev=document.getElementById('seed-preview');
-      prev.style.display='block';
-      prev.innerHTML=`✅ File valido — <strong>${total} articoli</strong> pronti per l'importazione in ${Object.keys(data.years).length} anni`;
-      document.getElementById('import-confirm-btn').style.display='inline-flex';
-    }catch(err){toast('Errore lettura file ⚠️');}
-  };
-  reader.readAsText(file);
-}
-function confirmImport(){
-  if(!_pendingSeed)return;
-  // Merge: add items from seed into S.years, skip if id already exists
-  const existingIds=new Set();
-  Object.values(S.years).forEach(ms=>Object.values(ms).forEach(mo=>(mo.items||[]).forEach(i=>existingIds.add(i.id))));
-
-  let added=0;
-  Object.entries(_pendingSeed.years).forEach(([yStr,ms])=>{
-    const y=+yStr;
-    if(!S.years[y]){S.years[y]={};for(let m=1;m<=12;m++)S.years[y][m]={name:MONTHS_IT[m-1]+' '+y,items:[]};}
-    Object.entries(ms).forEach(([mStr,mo])=>{
-      const m=+mStr;
-      if(!S.years[y][m]) S.years[y][m]={name:mo.name||MONTHS_IT[m-1]+' '+y,items:[]};
-      (mo.items||[]).forEach(it=>{
-        if(!existingIds.has(it.id)){
-          S.years[y][m].items.push(it);
-          existingIds.add(it.id);
-          added++;
-        }
-      });
-    });
-  });
-  // Merge categories
-  (_pendingSeed.categories||[]).forEach(c=>{if(!S.categories.includes(c))S.categories.push(c);});
-  save(); closeModal('seed-modal-overlay'); render();
-  toast(`✅ Importati ${added} articoli!`);
-}
+// ── SEED IMPORT DISABILITATO ──
+// let _pendingSeed = null;
+// function showSeedModal(){ /* Disabilitato: import seed non più necessario */ }
+// function handleSeedDrop(e){}
+// function handleSeedFile(file){}
+// function confirmImport(){}
 
 const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                  'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -1165,22 +1109,22 @@ const _now=new Date();
 // Override renderMain toolbar to add seed import button
 const _origRenderMain = renderMain;
 
-// Patch: add "Importa seed" to toolbar — injected after toolbar renders
-const _origRender = render;
-render = function(){
-  _origRender();
-  // Inject seed import btn into toolbar if not present
-  const tb = document.querySelector('.toolbar');
-  if(tb && !document.getElementById('seed-import-btn')){
-    const btn = document.createElement('button');
-    btn.id='seed-import-btn';
-    btn.className='btn btn-s';
-    btn.innerHTML='📥 Importa seed';
-    btn.onclick=showSeedModal;
-    btn.style.marginLeft='8px';
-    tb.appendChild(btn);
-  }
-};
+// Patch disabilitato: il tasto "Importa seed" non viene più aggiunto alla toolbar
+// const _origRender = render;
+// render = function(){
+//   _origRender();
+//   // Inject seed import btn into toolbar if not present
+//   const tb = document.querySelector('.toolbar');
+//   if(tb && !document.getElementById('seed-import-btn')){
+//     const btn = document.createElement('button');
+//     btn.id='seed-import-btn';
+//     btn.className='btn btn-s';
+//     btn.innerHTML='📥 Importa seed';
+//     btn.onclick=showSeedModal;
+//     btn.style.marginLeft='8px';
+//     tb.appendChild(btn);
+//   }
+// };
 
 </script>
 </body>
