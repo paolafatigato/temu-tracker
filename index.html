@@ -975,7 +975,12 @@ function renderMain(){
   const totSenzaReso = allItems.filter(i=>!i.daRestituire&&!i.reso).reduce((a,i)=>a+totale(i),0);
   const catSel = S.catCardSel||'';
   const catItems = allItems.filter(i=>i.categoria===catSel&&catSel);
-  const catSpesa = catItems.reduce((a,i)=>a+totale(i),0);
+  const catItemsNoReso = catItems.filter(i=>!i.reso);
+  const catResoItems = catItems.filter(i=>i.reso);
+  const catSpesa = catItemsNoReso.reduce((a,i)=>a+totale(i),0);
+  const catResoTot = catResoItems.reduce((a,i)=>a+totale(i),0);
+  const catRisp = catItemsNoReso.reduce((a,i)=>a+risparmio(i),0);
+  const catMedia = catItemsNoReso.length ? catSpesa/catItemsNoReso.length : 0;
   const resoTot = resoItems.reduce((a,i)=>a+totale(i),0);
   const resoTableHTML = resoItems.length ? `
     <div class="reso-section">
@@ -1011,7 +1016,12 @@ function renderMain(){
       <div class="ic-body">
         <div class="ic-lbl">Spesa per categoria</div>
         <div class="ic-val">${catSel ? eur(catSpesa) : '—'}</div>
-        <div class="ic-sub">${catSel ? catItems.length+' articoli in "'+catSel+'"' : 'Seleziona una categoria'}</div>
+        <div class="ic-sub">${catSel ? catItemsNoReso.length+' articoli (resi esclusi) in "'+catSel+'"' : 'Seleziona una categoria'}</div>
+        ${catSel ? `<div style="font-size:10px;color:var(--ink3);margin-top:5px;display:flex;flex-direction:column;gap:2px">
+          ${catResoTot>0 ? `<span>↩ Resi: <span style="font-family:'JetBrains Mono',monospace;color:var(--purple)">${eur(catResoTot)}</span></span>` : ''}
+          <span>💰 Risparmio: <span style="font-family:'JetBrains Mono',monospace;color:var(--teal)">${eur(catRisp)}</span></span>
+          <span>📦 Media art.: <span style="font-family:'JetBrains Mono',monospace">${eur(catMedia)}</span></span>
+        </div>` : ''}
         <select class="cat-select" onchange="S.catCardSel=this.value;save();renderMain()">
           <option value="">— Scegli categoria —</option>
           ${S.categories.map(c=>`<option value="${c}" ${c===catSel?'selected':''}>${c}</option>`).join('')}
