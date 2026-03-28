@@ -94,7 +94,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--ink);min-hei
   width:5px;height:5px;border-radius:50%;background:var(--orange)}
 
 /* ── MAIN ── */
-.month-content{padding:20px 24px 80px;max-width:1600px;margin:0 auto}
+.month-content{padding:20px 24px 80px;width:100%}
 
 /* ── STAT CARDS ── */
 .month-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
@@ -276,6 +276,12 @@ tbody tr.da-restituire td .cell, tbody tr.da-restituire td .cell-ro{
 }
 tbody tr.da-restituire .tipo-badge, tbody tr.da-restituire .cat-badge,
 tbody tr.da-restituire .num, tbody tr.da-restituire strong{opacity:.5}
+/* ── PRICE HIGHLIGHTS ── */
+tbody tr.row-high{background:#fffbe6!important;border-left:3px solid var(--amber)}
+tbody tr.row-high:hover{background:#fff3c4!important}
+tbody tr.row-low{background:#e0f7f7!important;border-left:3px solid var(--teal)}
+tbody tr.row-low:hover{background:#c8f0f0!important}
+
 /* ── RESO SECTION ── */
 .reso-section{margin-top:24px}
 .reso-sep{display:flex;align-items:center;gap:10px;margin-bottom:8px}
@@ -1113,8 +1119,10 @@ function itemRow(it){
   const ec=(field,type,displayVal)=>
     `<td><div class="cell" onclick="inlineEdit(this,'${it.id}','${field}','${type}')" title="Clicca per modificare">${displayVal}</div></td>`;
   const retCls = it.daRestituire ? 'da-restituire' : '';
+  const priceCls = tot > 9.99 ? 'row-high' : tot < 0.99 ? 'row-low' : '';
+  const rowCls = [retCls, priceCls].filter(Boolean).join(' ');
 
-  return`<tr data-id="${it.id}" class="${retCls}">
+  return`<tr data-id="${it.id}" class="${rowCls}">
     <td><div class="cell-ro" style="justify-content:center">
       <input type="checkbox" class="ret-check" ${it.daRestituire?'checked':''}
         onchange="toggleReturn('${it.id}',this.checked)" title="Da restituire">
@@ -1286,7 +1294,12 @@ function toggleReturn(id, checked){
   it.daRestituire=checked;save();
   // update row class immediately
   const tr=document.querySelector(`tr[data-id="${id}"]`);
-  if(tr)tr.className=checked?'da-restituire':'';
+  if(tr){
+    const tot=totale(it);
+    const priceCls=tot>9.99?'row-high':tot<0.99?'row-low':'';
+    const retC=checked?'da-restituire':'';
+    tr.className=[retC,priceCls].filter(Boolean).join(' ');
+  }
   // refresh the info cards only
   const mo=S.years[S.currentYear]?.[S.currentMonth];
   const allItems=(mo?.items||[]).filter(i=>i.nome?.trim());
