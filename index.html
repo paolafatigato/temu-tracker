@@ -647,6 +647,28 @@ tbody tr.da-restituire .num, tbody tr.da-restituire strong{opacity:.5}
   </div>
 </div>
 
+<!-- SEARCH MODAL -->
+<div class="modal-overlay" id="search-modal-overlay" onclick="handleOvClick(event,'search-modal-overlay')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">🔎 Cerca articoli</span>
+      <button class="close-btn" onclick="closeModal('search-modal-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nome prodotto</label>
+        <input type="text" id="f-search-query" placeholder="es. cappellino, cavo USB…" autocomplete="off" onkeydown="if(event.key==='Enter')performSearch()">
+      </div>
+      <div style="font-size:11px;color:var(--ink3);padding:8px 12px;background:var(--bg);border-radius:var(--radius)">💡 La ricerca è case-insensitive e cerca nel nome del prodotto.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-s" onclick="clearSearch()">Cancella filtro</button>
+      <button class="btn btn-s" onclick="closeModal('search-modal-overlay')">Annulla</button>
+      <button class="btn btn-p" onclick="performSearch()">Cerca</button>
+    </div>
+  </div>
+</div>
+
 <!-- SEED IMPORT MODAL -->
 <div class="modal-overlay" id="seed-modal-overlay" onclick="handleOvClick(event,'seed-modal-overlay')">
   <div class="modal" style="max-width:460px">
@@ -1064,7 +1086,7 @@ function renderMain(){
         <option value="asc"   ${S.sortBy==='asc'?'selected':''}>Prezzo ↑</option>
         <option value="risp"  ${S.sortBy==='risp'?'selected':''}>Risparmio ↓</option>
       </select>
-      <button class="btn btn-s" onclick="doSearch()">🔎 Cerca</button>
+      <button class="btn btn-s" onclick="showSearchModal()">🔎 Cerca</button>
       <button class="btn btn-s" style="margin-left:auto" onclick="showCatModal()">🏷️ Categorie</button>
     </div>
     <div class="table-wrapper">${tableInner}</div>
@@ -1336,14 +1358,27 @@ function updateComputed(){
   cd.style.color=risp>=0?'var(--teal)':'var(--purple)';
 }
 // ── SEARCH HELPERS ──
-function doSearch(){
-  const q = prompt('Cerca articolo per nome (lascia vuoto per rimuovere filtro):', S.filterQuery||'');
-  if(q===null) return; // annullato
-  S.filterQuery = q.trim();
+function showSearchModal(){
+  document.getElementById('f-search-query').value = S.filterQuery || '';
+  openModal('search-modal-overlay');
+  setTimeout(() => document.getElementById('f-search-query').focus(), 120);
+}
+function performSearch(){
+  const q = document.getElementById('f-search-query').value.trim();
+  S.filterQuery = q;
   save();
+  closeModal('search-modal-overlay');
   renderMain();
-  if(S.filterQuery) toast('Filtrato: '+S.filterQuery);
-  else toast('Filtro ricerca rimosso');
+  if(S.filterQuery) toast('Ricerca: "' + S.filterQuery + '"');
+  else toast('Ricerca rimossa');
+}
+function clearSearch(){
+  S.filterQuery = '';
+  document.getElementById('f-search-query').value = '';
+  save();
+  closeModal('search-modal-overlay');
+  renderMain();
+  toast('Filtro ricerca cancellato');
 }
 function selTipo(el){document.querySelectorAll('.tipo-option').forEach(o=>o.classList.remove('sel-utile','sel-sfizio','sel-regali','sel-none'));const t=el.dataset.tipo;el.classList.add(t==='utile'?'sel-utile':t==='sfizio'?'sel-sfizio':t==='regali'?'sel-regali':'sel-none');}
 function fillCatSel(sel){document.getElementById('f-cat').innerHTML=`<option value="">— Nessuna —</option>`+S.categories.map(c=>`<option value="${c}" ${c===sel?'selected':''}>${c}</option>`).join('');}
