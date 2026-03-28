@@ -957,7 +957,11 @@ function renderMain(){
   if(S.filterTipo)items=items.filter(i=>i.tipo===S.filterTipo);
   if(S.filterCat) items=items.filter(i=>i.categoria===S.filterCat);
   if(S.filterQuery) items = items.filter(i=> (i.nome||'').toLowerCase().includes(String(S.filterQuery||'').toLowerCase()));
-  if(S.sortBy==='cat')      items.sort((a,b)=>(a.categoria||'').localeCompare(b.categoria||''));
+  if(S.sortBy==='cat')      items.sort((a,b)=>{
+    const cc=(a.categoria||'').localeCompare(b.categoria||'');
+    if(cc!==0)return cc;
+    return getNameGroupKey(a.nome).localeCompare(getNameGroupKey(b.nome));
+  });
   else if(S.sortBy==='tipo')items.sort((a,b)=>(a.tipo||'z').localeCompare(b.tipo||'z'));
   else if(S.sortBy==='asc') items.sort((a,b)=>totale(a)-totale(b));
   else if(S.sortBy==='desc')items.sort((a,b)=>totale(b)-totale(a));
@@ -1221,6 +1225,17 @@ function inlineCat(cell, id) {
 }
 
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── NAME SIMILARITY GROUPING ──
+const _STOPWORDS=new Set(['il','la','lo','le','i','gli','un','una','uno','di','da','del','della','dello','dei','delle','degli','e','a','in','con','su','per','tra','fra','al','allo','alla','ai','agli','alle','dal','dallo','dalla','dai','dagli','dalle','nel','nello','nella','nei','negli','nelle','col','coi','sul','sullo','sulla','sui','sugli','sulle']);
+function getNameGroupKey(nome){
+  if(!nome)return'';
+  const norm=nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').trim();
+  const words=norm.split(/\s+/).filter(w=>w.length>2&&!_STOPWORDS.has(w));
+  if(!words.length)return norm.slice(0,5)||'';
+  // Use first significant word; truncate to 6 chars so variants (maglione/maglietta) share a prefix
+  return words[0].slice(0,6);
+}
 
 // ── NAVIGATION ──
 function selYear(y){S.currentYear=+y;S.filterTipo='';S.filterCat='';S.sortBy='order';save();render();}
