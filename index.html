@@ -823,8 +823,8 @@ function buildCalendar(){
   const years={};
   yrs.forEach(y=>{years[y]={};});
   yrs.forEach(y=>{for(let m=1;m<=12;m++)if(!years[y][m])years[y][m]={name:MONTHS_IT[m-1]+' '+y,items:[]};});
-  return{years,categories:['Casa','Moda','Cancelleria','Regalo','Tech','Hobby','Sport','Cibo','Altro'],
-         currentYear:curY,currentMonth:now.getMonth()+1,filterTipo:'',filterCat:'',sortBy:'order',catCardSel:''};
+    return{years,categories:['Casa','Moda','Cancelleria','Regalo','Tech','Hobby','Sport','Cibo','Altro'],
+      currentYear:curY,currentMonth:now.getMonth()+1,filterTipo:'',filterCat:'',filterQuery:'',sortBy:'order',catCardSel:''};
 }
 
 let S;
@@ -928,6 +928,7 @@ function renderMain(){
   let items=[...activeItems];
   if(S.filterTipo)items=items.filter(i=>i.tipo===S.filterTipo);
   if(S.filterCat) items=items.filter(i=>i.categoria===S.filterCat);
+  if(S.filterQuery) items = items.filter(i=> (i.nome||'').toLowerCase().includes(String(S.filterQuery||'').toLowerCase()));
   if(S.sortBy==='cat')      items.sort((a,b)=>(a.categoria||'').localeCompare(b.categoria||''));
   else if(S.sortBy==='tipo')items.sort((a,b)=>(a.tipo||'z').localeCompare(b.tipo||'z'));
   else if(S.sortBy==='asc') items.sort((a,b)=>totale(a)-totale(b));
@@ -1063,6 +1064,7 @@ function renderMain(){
         <option value="asc"   ${S.sortBy==='asc'?'selected':''}>Prezzo ↑</option>
         <option value="risp"  ${S.sortBy==='risp'?'selected':''}>Risparmio ↓</option>
       </select>
+      <button class="btn btn-s" onclick="doSearch()">🔎 Cerca</button>
       <button class="btn btn-s" style="margin-left:auto" onclick="showCatModal()">🏷️ Categorie</button>
     </div>
     <div class="table-wrapper">${tableInner}</div>
@@ -1332,6 +1334,16 @@ function updateComputed(){
   document.getElementById('c-totale').textContent=eur(tot);
   const cd=document.getElementById('c-risparmio');cd.textContent=eur(risp);
   cd.style.color=risp>=0?'var(--teal)':'var(--purple)';
+}
+// ── SEARCH HELPERS ──
+function doSearch(){
+  const q = prompt('Cerca articolo per nome (lascia vuoto per rimuovere filtro):', S.filterQuery||'');
+  if(q===null) return; // annullato
+  S.filterQuery = q.trim();
+  save();
+  renderMain();
+  if(S.filterQuery) toast('Filtrato: '+S.filterQuery);
+  else toast('Filtro ricerca rimosso');
 }
 function selTipo(el){document.querySelectorAll('.tipo-option').forEach(o=>o.classList.remove('sel-utile','sel-sfizio','sel-regali','sel-none'));const t=el.dataset.tipo;el.classList.add(t==='utile'?'sel-utile':t==='sfizio'?'sel-sfizio':t==='regali'?'sel-regali':'sel-none');}
 function fillCatSel(sel){document.getElementById('f-cat').innerHTML=`<option value="">— Nessuna —</option>`+S.categories.map(c=>`<option value="${c}" ${c===sel?'selected':''}>${c}</option>`).join('');}
