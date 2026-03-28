@@ -933,6 +933,8 @@ function renderMain(){
   else if(S.sortBy==='asc') items.sort((a,b)=>totale(a)-totale(b));
   else if(S.sortBy==='desc')items.sort((a,b)=>totale(b)-totale(a));
   else if(S.sortBy==='risp')items.sort((a,b)=>risparmio(b)-risparmio(a));
+  // Ordine "order" (default): mostra prima gli ultimi inseriti
+  if(S.sortBy==='order') items = items.slice().reverse();
 
   const ym=S.years[S.currentYear]||{};
   const nonEmpty=Object.entries(ym).filter(([,mm])=>(mm.items||[]).filter(i=>i.nome?.trim()).length>0);
