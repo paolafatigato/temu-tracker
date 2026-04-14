@@ -225,7 +225,7 @@ tbody td{padding:0;vertical-align:middle}
   color:var(--ink3);line-height:1;padding:2px}
 .close-btn:hover{color:var(--ink)}
 .modal-body{padding:20px;display:flex;flex-direction:column;gap:15px}
-.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group{display:flex;flex-direction:column;gap:4px;position:relative}
 .form-group label{font-size:10px;font-weight:700;text-transform:uppercase;
   letter-spacing:.9px;color:var(--ink3)}
 .form-group input,.form-group select{
@@ -293,9 +293,8 @@ tbody tr.row-low:hover{background:#c8f0f0!important}
 .reso-section tbody tr td .cell-ro{text-decoration:line-through;color:#aaa}
 .reso-section tbody tr td .cell-ro strong,.reso-section tbody tr td .cell-ro .num{color:#aaa;font-weight:500}
 
-/* ── INFO CARDS (return + cat) ── */
-.info-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-@media(max-width:600px){.info-cards{grid-template-columns:1fr}}
+/* ── INFO CARDS (return + cat + sum) ── */
+.info-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
 .info-card{
   border-radius:var(--radius);padding:14px 18px;
   display:flex;align-items:center;gap:16px;position:relative;overflow:hidden
@@ -331,6 +330,34 @@ tbody tr.row-low:hover{background:#c8f0f0!important}
   cursor:pointer;margin-top:6px;display:block
 }
 .cat-select:focus{outline:none;border-color:var(--teal)}
+
+/* ── SELECTION SUM CARD ── */
+.info-card.sum-card{background:linear-gradient(135deg,#fff5e6,#ffecd0);border:1.5px solid var(--orange)}
+.sum-card .ic-lbl{color:var(--orange-dark)}
+.sel-check{
+  width:16px;height:16px;border-radius:3px;border:2px solid var(--border2);
+  cursor:pointer;appearance:none;-webkit-appearance:none;
+  background:var(--surface);transition:all .15s;flex-shrink:0;position:relative;display:block
+}
+.sel-check:hover{border-color:var(--orange)}
+.sel-check:checked{background:var(--orange);border-color:var(--orange)}
+.sel-check:checked::after{content:'✓';position:absolute;top:-2px;left:1px;font-size:10px;color:white;font-weight:700}
+.sel-all-chk{width:16px;height:16px;accent-color:var(--orange);cursor:pointer;display:block}
+tbody tr.sel-row{background:#fff5e0!important}
+tbody tr.sel-row:hover{background:#ffeed4!important}
+.cell.nav-focused{background:var(--orange-light)!important;outline:2px solid var(--orange);outline-offset:-2px;border-radius:4px;}
+
+/* ── SUM MODE TOGGLE ── */
+.sum-mode-toggle{display:flex;gap:4px;margin-top:6px}
+.sum-mode-btn{
+  flex:1;padding:4px 6px;font-size:10px;font-weight:700;
+  border:1.5px solid var(--border2);border-radius:var(--radius);
+  cursor:pointer;background:var(--surface);color:var(--ink3);
+  font-family:'Sora',sans-serif;transition:all .15s;text-align:center
+}
+.sum-mode-btn.active{background:var(--orange);border-color:var(--orange);color:white}
+.sum-mode-btn:not(.active):hover{border-color:var(--orange);color:var(--orange)}
+.sum-card .ic-secondary{font-size:10px;color:var(--ink3);margin-top:3px;font-family:'JetBrains Mono',monospace}
 
 /* ── SEP ROW ── */
 .sep-row td{background:linear-gradient(to right,#fff7f0,transparent);
@@ -552,6 +579,27 @@ tbody tr.row-low:hover{background:#c8f0f0!important}
   font-size:12px;color:var(--ink2);border:1px solid var(--border);display:none}
 .seed-warning{background:#fff3e0;border:1px solid #ff9800;border-radius:var(--radius);
   padding:12px 14px;font-size:12px;color:#7a4300}
+
+/* ── MOTIV SUGGESTIONS ── */
+.motiv-suggestions{
+  position:absolute;top:100%;left:0;right:0;background:var(--surface);
+  border:1.5px solid var(--border2);border-radius:var(--radius);
+  margin-top:4px;display:none;z-index:50;box-shadow:var(--sh);
+  max-height:200px;overflow-y:auto;
+}
+.motiv-suggestions.show{display:block}
+.motiv-suggestion-item{
+  padding:8px 12px;cursor:pointer;font-size:12px;color:var(--ink);
+  border-bottom:1px solid var(--border);transition:background .1s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.motiv-suggestion-item:last-child{border-bottom:none}
+.motiv-suggestion-item:hover{background:var(--orange-light)}
+
+/* ── RETURN REASON SECTION ── */
+.return-reason-section{
+  margin-top:20px;padding:16px;background:linear-gradient(135deg,#f5eaf3,#ede0eb);
+  border:1.5px solid var(--purple);border-radius:var(--radius);
+}
 </style>
 </head>
 <body>
@@ -609,12 +657,25 @@ tbody tr.row-low:hover{background:#c8f0f0!important}
       <div class="form-group"><label>Nome prodotto</label><input type="text" id="f-nome" placeholder="es. cappellino sole 🧢" autocomplete="off"></div>
       <div class="form-row">
         <div class="form-group"><label>Prezzo originale (€)</label><input type="number" step="0.01" min="0" id="f-prezzo" placeholder="0.00" oninput="updateComputed()"></div>
-        <div class="form-group"><label>Motivo sconto</label><input type="text" id="f-motivo" placeholder="rimborso, reso, sconto…"></div>
+        <div class="form-group"><label>Motivo sconto</label>
+          <div style="position:relative">
+            <input type="text" id="f-motivo" placeholder="rimborso, reso, sconto…" autocomplete="off" oninput="updateMotivSuggestions()">
+            <div id="motiv-suggestions" class="motiv-suggestions"></div>
+          </div>
+        </div>
       </div>
       <div class="form-row-3">
         <div class="form-group"><label>Sconto 1 (€)</label><input type="number" step="0.01" min="0" id="f-sc1" placeholder="0.00" oninput="updateComputed()"></div>
         <div class="form-group"><label>Sconto 2 (€)</label><input type="number" step="0.01" min="0" id="f-sc2" placeholder="0.00" oninput="updateComputed()"></div>
-        <div class="form-group"><label>Sconto 3 (€)</label><input type="number" step="0.01" min="0" id="f-sc3" placeholder="0.00" oninput="updateComputed()"></div>
+        <div class="form-group">
+          <label>Credito (€)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" step="0.01" min="0" id="f-sc3" placeholder="0.00" oninput="updateComputed()" style="flex:1">
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;white-space:nowrap;color:var(--teal);font-weight:700;text-transform:none;letter-spacing:0">
+              <input type="checkbox" id="f-sc3full" onchange="updateSc3Full()" style="accent-color:var(--teal);width:14px;height:14px;cursor:pointer"> Tutto
+            </label>
+          </div>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>✅ Totale pagato</label><div class="computed-val" id="c-totale">€ 0.00</div></div>
@@ -856,6 +917,11 @@ function buildCalendar(){
 }
 
 let S;
+let selectedIds = new Set();
+let selSumMode = 'totale'; // 'totale' | 'prezzo'
+let navFocus = null; // {id, field} - keyboard navigation focus
+let lastSelId = null; // last selected row id for shift+click range selection
+const NAV_FIELDS = ['categoria','nome','prezzo','sc1','sc2','sc3','motivo','prezzoAltrove','dove'];
 
 // Initialize S immediately with default
 function initializeState(){
@@ -878,7 +944,11 @@ function getItem(id){
 }
 
 // ── MATH ──
-function totale(it){return Math.max(0,(it.prezzo||0)-(it.sc1||0)-(it.sc2||0)-(it.sc3||0));}
+function totale(it){
+  const base=Math.max(0,(it.prezzo||0)-(it.sc1||0)-(it.sc2||0));
+  if(it.sc3Full) return 0;
+  return Math.max(0,base-(it.sc3||0));
+}
 function risparmio(it){
   const alt=(it.prezzoAltrove!==null&&it.prezzoAltrove!==undefined&&it.prezzoAltrove!=='')
     ?+it.prezzoAltrove:(it.prezzo||0);
@@ -957,11 +1027,13 @@ function renderMain(){
   if(S.filterTipo)items=items.filter(i=>i.tipo===S.filterTipo);
   if(S.filterCat) items=items.filter(i=>i.categoria===S.filterCat);
   if(S.filterQuery) items = items.filter(i=> (i.nome||'').toLowerCase().includes(String(S.filterQuery||'').toLowerCase()));
-  if(S.sortBy==='cat')      items.sort((a,b)=>{
-    const cc=(a.categoria||'').localeCompare(b.categoria||'');
-    if(cc!==0)return cc;
-    return getNameGroupKey(a.nome).localeCompare(getNameGroupKey(b.nome));
-  });
+  if(S.sortBy==='cat'){
+    items.sort((a,b)=>{
+      const cc=(a.categoria||'').localeCompare(b.categoria||'');
+      if(cc!==0)return cc;
+      return normSortKey(a.nome).localeCompare(normSortKey(b.nome));
+    });
+  }
   else if(S.sortBy==='tipo')items.sort((a,b)=>(a.tipo||'z').localeCompare(b.tipo||'z'));
   else if(S.sortBy==='asc') items.sort((a,b)=>totale(a)-totale(b));
   else if(S.sortBy==='desc')items.sort((a,b)=>totale(b)-totale(a));
@@ -992,13 +1064,14 @@ function renderMain(){
       const cats=[...new Set(items.map(i=>i.categoria||''))];
       cats.forEach(cat=>{
         const g=items.filter(i=>(i.categoria||'')===cat);
-        if(g.length){rows+=`<tr class="sep-row"><td colspan="13">${cat||'Senza categoria'} — ${g.length} art.</td></tr>`;rows+=g.map(itemRow).join('');}
+        if(g.length){rows+=`<tr class="sep-row"><td colspan="14">${cat||'Senza categoria'} — ${g.length} art.</td></tr>`;rows+=g.map(itemRow).join('');}
       });
     }else rows=items.map(itemRow).join('');
     tableInner=`<table><thead><tr>
+      <th style="width:28px"><input type="checkbox" class="sel-all-chk" id="sel-all-check" onchange="toggleSelAll(this.checked)" title="Seleziona/deseleziona tutto"></th>
       <th title="Da restituire">↩</th>
       <th>Tipo</th><th>Categoria</th><th>Prodotto</th>
-      <th>Prezzo</th><th>Sc.1</th><th>Sc.2</th><th>Sc.3</th>
+      <th>Prezzo</th><th>Sc.1</th><th>Sc.2</th><th>Credito</th>
       <th>Motivo</th><th>Totale</th>
       <th>P.altrove</th><th>Dove</th><th>Risparmio</th><th></th>
     </tr></thead><tbody>${rows}</tbody></table>`;
@@ -1027,7 +1100,7 @@ function renderMain(){
       <div class="table-wrapper reso-wrapper">
         <table><thead><tr>
           <th>↩</th><th>Tipo</th><th>Categoria</th><th>Prodotto</th>
-          <th>Prezzo</th><th>Sc.1</th><th>Sc.2</th><th>Sc.3</th>
+          <th>Prezzo</th><th>Sc.1</th><th>Sc.2</th><th>Credito</th>
           <th>Motivo</th><th>Totale</th>
           <th>P.altrove</th><th>Dove</th><th>Risparmio</th><th></th>
         </tr></thead>
@@ -1035,6 +1108,12 @@ function renderMain(){
         </table>
       </div>
     </div>` : '';
+
+  const selMonthItems = allItems.filter(i=>!i.reso);
+  const selItems = selMonthItems.filter(i=>selectedIds.has(i.id));
+  const selSumTot = selItems.reduce((a,i)=>a+totale(i),0);
+  const selSumOrig = selItems.reduce((a,i)=>a+(i.prezzo||0),0);
+  const selSum = selSumMode==='prezzo' ? selSumOrig : selSumTot;
 
   const infoCardsHTML = `<div class="info-cards">
     <div class="info-card return-card">
@@ -1063,7 +1142,24 @@ function renderMain(){
         </select>
       </div>
     </div>
+    <div class="info-card sum-card">
+      <div class="ic-icon">🧮</div>
+      <div class="ic-body">
+        <div class="ic-lbl">Somma selezionati</div>
+        <div class="ic-val">${selectedIds.size>0?eur(selSum):'—'}</div>
+        ${selectedIds.size>0&&selSumMode==='totale'?`<div class="ic-secondary">💰 Prezzo orig.: ${eur(selSumOrig)}</div>`:
+          selectedIds.size>0&&selSumMode==='prezzo'?`<div class="ic-secondary">✅ Tot. pagato: ${eur(selSumTot)}</div>`:''}
+        <div class="ic-sub">${selectedIds.size>0?selectedIds.size+(selectedIds.size===1?' articolo selezionato':' articoli selezionati'):'Seleziona righe dalla tabella'}</div>
+        <div class="sum-mode-toggle">
+          <button class="sum-mode-btn ${selSumMode==='totale'?'active':''}" onclick="selSumMode='totale';renderMain()">✅ Tot. pagato</button>
+          <button class="sum-mode-btn ${selSumMode==='prezzo'?'active':''}" onclick="selSumMode='prezzo';renderMain()">💰 Prezzo orig.</button>
+        </div>
+        ${selectedIds.size>0?`<button class="ic-btn" onclick="clearSelection()" style="border-color:var(--orange-dark);color:var(--orange-dark)">✕ Deseleziona tutti</button>`:''}
+      </div>
+    </div>
   </div>`;
+
+
 
   main.innerHTML=`<div class="month-content">
     ${avgHTML}
@@ -1121,23 +1217,26 @@ function itemRow(it){
   const scEl=v=>v?`<span class="num neg">-${eur(v)}</span>`:`<span class="muted">—</span>`;
   const rispEl=risp!==0?`<span class="num ${risp>=0?'pos':'neg'}">${eur(risp)}</span>`:`<span class="muted">—</span>`;
   const ec=(field,type,displayVal)=>
-    `<td><div class="cell" onclick="inlineEdit(this,'${it.id}','${field}','${type}')" title="Clicca per modificare">${displayVal}</div></td>`;
+    `<td><div class="cell" data-field="${field}" data-id="${it.id}" onclick="inlineEdit(this,'${it.id}','${field}','${type}')" title="Clicca per modificare">${displayVal}</div></td>`;
   const retCls = it.daRestituire ? 'da-restituire' : '';
   const priceCls = tot > 9.99 ? 'row-high' : tot < 0.99 ? 'row-low' : '';
   const rowCls = [retCls, priceCls].filter(Boolean).join(' ');
 
   return`<tr data-id="${it.id}" class="${rowCls}">
     <td><div class="cell-ro" style="justify-content:center">
+      <input type="checkbox" class="sel-check" data-id="${it.id}" ${selectedIds.has(it.id)?'checked':''} onclick="handleSelCheck(event,'${it.id}')" title="Seleziona">
+    </div></td>
+    <td><div class="cell-ro" style="justify-content:center">
       <input type="checkbox" class="ret-check" ${it.daRestituire?'checked':''}
         onchange="toggleReturn('${it.id}',this.checked)" title="Da restituire">
     </div></td>
     <td><div class="cell-ro">${tipoBadge}</div></td>
-    <td><div class="cell" onclick="inlineCat(this,'${it.id}')" title="Clicca per modificare">${catBadge}</div></td>
+    <td><div class="cell" data-field="categoria" data-id="${it.id}" onclick="inlineCat(this,'${it.id}')" title="Clicca per modificare">${catBadge}</div></td>
     ${ec('nome','text',`<strong>${esc(it.nome)}</strong>`)}
     ${ec('prezzo','number',`<span class="num">${eur(it.prezzo||0)}</span>`)}
     ${ec('sc1','number',scEl(it.sc1))}
     ${ec('sc2','number',scEl(it.sc2))}
-    ${ec('sc3','number',scEl(it.sc3))}
+    <td><div class="cell" onclick="inlineCreditoCell(this,'${it.id}')" title="Clicca per modificare il credito">${creditoDisplay(it)}</div></td>
     ${ec('motivo','text',`<span style="font-size:11px;color:var(--ink3)">${esc(it.motivo||'')}</span>`)}
     <td><div class="cell-ro"><strong class="num">${eur(tot)}</strong></div></td>
     ${ec('prezzoAltrove','number',altVal!==null?`<span class="num">${eur(altVal)}</span>`:`<span class="muted">—</span>`)}
@@ -1160,7 +1259,48 @@ function inlineEdit(cell, id, field, type) {
   inp.type = type;
   if(type==='number'){inp.step='0.01';inp.min='0';}
   inp.value = rawVal===null?'':rawVal;
-  cell.innerHTML=''; cell.appendChild(inp);
+  
+  // Wrapper per l'inline edit con suggestion container se è il motivo
+  let wrapper = document.createElement('div');
+  if(field==='motivo'){
+    wrapper.style.position='relative';
+    wrapper.appendChild(inp);
+    cell.innerHTML=''; cell.appendChild(wrapper);
+    
+    // Suggerimenti container
+    const sugContainer = document.createElement('div');
+    sugContainer.className = 'motiv-suggestions';
+    sugContainer.style.position='absolute';
+    sugContainer.style.top='100%';
+    sugContainer.style.left='0';
+    sugContainer.style.right='0';
+    sugContainer.style.zIndex='1000';
+    wrapper.appendChild(sugContainer);
+    
+    // Listener per autocomplete
+    inp.addEventListener('input', () => {
+      const q = inp.value.toLowerCase().trim();
+      const allMotivi = getAllMotivi();
+      const filtered = q ? allMotivi.filter(m => m.toLowerCase().includes(q)) : [];
+      sugContainer.innerHTML = '';
+      filtered.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'motiv-suggestion-item';
+        item.textContent = m;
+        // mousedown prima di blur: previene il blur e salva il valore
+        item.addEventListener('mousedown', e => {
+          e.preventDefault();
+          inp.value = m;
+          sugContainer.innerHTML = '';
+          inp.focus();
+        });
+        sugContainer.appendChild(item);
+      });
+    });
+  } else {
+    cell.innerHTML=''; cell.appendChild(inp);
+  }
+  
   inp.focus(); inp.select();
 
   function commit(){
@@ -1190,12 +1330,22 @@ function inlineEdit(cell, id, field, type) {
       cards[4].querySelector('.val').textContent=st.sfizi;
       cards[4].querySelector('.sub').textContent=eur(st.spesaSfizio);
     }
+    setNavFocus(id, field);
   }
 
   inp.addEventListener('blur',commit);
   inp.addEventListener('keydown',e=>{
     if(e.key==='Enter'){e.preventDefault();inp.blur();}
-    if(e.key==='Escape'){cell.classList.remove('editing');renderMain();}
+    if(e.key==='Escape'){cell.classList.remove('editing');setNavFocus(null,null);renderMain();}
+    if(e.key==='Tab'){
+      e.preventDefault();
+      const nIdx=NAV_FIELDS.indexOf(field)+(e.shiftKey?-1:1);
+      inp.blur();
+      if(nIdx>=0&&nIdx<NAV_FIELDS.length){
+        const nf=NAV_FIELDS[nIdx];
+        setTimeout(()=>{setNavFocus(id,nf);const ne=getCellEl(id,nf);if(ne)ne.click();},10);
+      }
+    }
   });
 }
 
@@ -1218,28 +1368,153 @@ function inlineCat(cell, id) {
       tr.parentNode.replaceChild(nb.firstChild, tr);
     }
     renderHeader();renderMonths();
+    setNavFocus(id,'categoria');
   }
   sel.addEventListener('blur',commit);
   sel.addEventListener('change',()=>sel.blur());
-  sel.addEventListener('keydown',e=>{if(e.key==='Escape'){cell.classList.remove('editing');renderMain();}});
+  sel.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){cell.classList.remove('editing');setNavFocus(null,null);renderMain();}
+    if(e.key==='Tab'){
+      e.preventDefault();
+      const nIdx=NAV_FIELDS.indexOf('categoria')+(e.shiftKey?-1:1);
+      sel.blur();
+      if(nIdx>=0&&nIdx<NAV_FIELDS.length){
+        const nf=NAV_FIELDS[nIdx];
+        setTimeout(()=>{setNavFocus(id,nf);const ne=getCellEl(id,nf);if(ne)ne.click();},10);
+      }
+    }
+  });
+}
+
+// ── CREDITO DISPLAY HELPER ──
+function creditoDisplay(it){
+  if(it.sc3Full){
+    const base=Math.max(0,(it.prezzo||0)-(it.sc1||0)-(it.sc2||0));
+    return `<span style="font-size:10px;font-weight:700;color:var(--teal);background:var(--teal-light);padding:2px 7px;border-radius:10px;white-space:nowrap">✓ ${eur(base)}</span>`;
+  }
+  if(it.sc3) return `<span class="num neg">-${eur(it.sc3)}</span>`;
+  return `<span class="muted">—</span>`;
+}
+
+// ── INLINE CREDITO CELL ──
+function inlineCreditoCell(cell, id){
+  if(cell.classList.contains('editing')) return;
+  const it=getItem(id); if(!it) return;
+  cell.classList.add('editing');
+
+  const wrapper=document.createElement('div');
+  wrapper.style.cssText='display:flex;align-items:center;gap:5px;padding:2px 6px';
+
+  const chk=document.createElement('input');
+  chk.type='checkbox';
+  chk.checked=it.sc3Full||false;
+  chk.title='Tutto il totale con credito';
+  chk.style.cssText='flex-shrink:0;cursor:pointer;accent-color:var(--teal);width:14px;height:14px';
+
+  const inp=document.createElement('input');
+  inp.type='number'; inp.step='0.01'; inp.min='0';
+  inp.value=it.sc3||''; inp.placeholder='0.00';
+  inp.disabled=it.sc3Full||false;
+  inp.style.cssText='width:66px;height:28px;padding:2px 6px;border:1.5px solid var(--orange);border-radius:4px;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink);background:var(--orange-light);outline:none';
+
+  function doCommit(sc3full, sc3val){
+    if(!cell.classList.contains('editing')) return;
+    cell.classList.remove('editing');
+    it.sc3Full = sc3full;
+    it.sc3 = (!sc3full && sc3val !== '') ? parseFloat(sc3val)||0 : null;
+    save();
+    const tr=cell.closest('tr');
+    if(tr){const nb=document.createElement('tbody');nb.innerHTML=itemRow(it);tr.parentNode.replaceChild(nb.firstChild,tr);}
+    renderHeader(); renderMonths();
+    const st=mStats(S.currentYear,S.currentMonth);
+    const cards=document.querySelectorAll('.stat-card');
+    if(cards.length>=5){
+      cards[0].querySelector('.val').textContent=eur(st.totSpeso);
+      cards[0].querySelector('.sub').textContent=st.count+' articoli';
+      cards[1].querySelector('.val').textContent=eur(st.totRisp);
+      cards[2].querySelector('.val').textContent=eur(st.media);
+      cards[3].querySelector('.val').textContent=st.utili;
+      cards[3].querySelector('.sub').textContent=eur(st.spesaUtile);
+      cards[4].querySelector('.val').textContent=st.sfizi;
+      cards[4].querySelector('.sub').textContent=eur(st.spesaSfizio);
+    }
+    updateSumCard();
+  }
+
+  // mousedown preventDefault: prevents the number input from blurring before
+  // the checkbox change event fires (classic click-vs-blur race condition)
+  chk.addEventListener('mousedown', e => e.preventDefault());
+  chk.addEventListener('change', () => {
+    if(chk.checked){
+      doCommit(true, '');
+    } else {
+      inp.disabled = false;
+      inp.focus(); inp.select();
+    }
+  });
+
+  wrapper.appendChild(chk);
+  wrapper.appendChild(inp);
+  cell.innerHTML=''; cell.appendChild(wrapper);
+  if(!it.sc3Full){inp.focus(); inp.select();}
+
+  inp.addEventListener('blur', () => doCommit(chk.checked, inp.value));
+  inp.addEventListener('keydown', e => {
+    if(e.key==='Enter'){e.preventDefault(); inp.blur();}
+    if(e.key==='Escape'){cell.classList.remove('editing'); renderMain();}
+  });
 }
 
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// ── NAME SIMILARITY GROUPING ──
-const _STOPWORDS=new Set(['il','la','lo','le','i','gli','un','una','uno','di','da','del','della','dello','dei','delle','degli','e','a','in','con','su','per','tra','fra','al','allo','alla','ai','agli','alle','dal','dallo','dalla','dai','dagli','dalle','nel','nello','nella','nei','negli','nelle','col','coi','sul','sullo','sulla','sui','sugli','sulle']);
-function getNameGroupKey(nome){
+// ── GET UNIQUE MOTIVI ──
+function getAllMotivi(){
+  const motivi = new Set();
+  Object.values(S.years).forEach(ms=>Object.values(ms).forEach(mo=>{
+    (mo.items||[]).forEach(it=>{
+      if(it.motivo && it.motivo.trim()) motivi.add(it.motivo.trim());
+    });
+  }));
+  return Array.from(motivi).sort();
+}
+
+// ── MOTIV SUGGESTIONS ──
+function updateMotivSuggestions(){
+  const inp = document.getElementById('f-motivo');
+  const query = inp.value.trim().toLowerCase();
+  const suggestBox = document.getElementById('motiv-suggestions');
+  
+  if(!query){
+    suggestBox.classList.remove('show');
+    return;
+  }
+  
+  const allMotivi = getAllMotivi();
+  const filtered = allMotivi.filter(m=>m.toLowerCase().includes(query));
+  
+  if(filtered.length === 0){
+    suggestBox.classList.remove('show');
+    return;
+  }
+  
+  suggestBox.innerHTML = filtered.map(m=>
+    `<div class="motiv-suggestion-item" onclick="document.getElementById('f-motivo').value='${m.replace(/'/g,"\\'")}';updateMotivSuggestions()">${esc(m)}</div>`
+  ).join('');
+  suggestBox.classList.add('show');
+}
+
+// ── NAME SORT KEY (strip numbers & accents, sort alpha within category) ──
+function normSortKey(nome){
   if(!nome)return'';
-  const norm=nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').trim();
-  const words=norm.split(/\s+/).filter(w=>w.length>2&&!_STOPWORDS.has(w));
-  if(!words.length)return norm.slice(0,5)||'';
-  // Use first significant word; truncate to 6 chars so variants (maglione/maglietta) share a prefix
-  return words[0].slice(0,6);
+  return nome.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z ]/g,' ')
+    .replace(/\s+/g,' ').trim();
 }
 
 // ── NAVIGATION ──
-function selYear(y){S.currentYear=+y;S.filterTipo='';S.filterCat='';S.sortBy='order';save();render();}
-function selMonth(m){S.currentMonth=+m;S.filterTipo='';S.filterCat='';S.sortBy='order';save();renderMonths();renderMain();}
+function selYear(y){S.currentYear=+y;S.filterTipo='';S.filterCat='';S.sortBy='order';selectedIds.clear();save();render();}
+function selMonth(m){S.currentMonth=+m;S.filterTipo='';S.filterCat='';S.sortBy='order';selectedIds.clear();save();renderMonths();renderMain();}
 function addYear(){
   const y=parseInt(prompt('Anno da aggiungere:'));
   if(!y||isNaN(y)||S.years[y])return;
@@ -1254,7 +1529,11 @@ function showAddItem(){
   editId=null;
   document.getElementById('modal-title').textContent='Aggiungi articolo';
   ['f-nome','f-prezzo','f-sc1','f-sc2','f-sc3','f-motivo','f-altrove','f-dove'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-sc3full').checked=false;
+  document.getElementById('f-sc3').disabled=false;
   fillCatSel('');selTipo(document.querySelector('[data-tipo=""]'));updateComputed();
+  // Hide suggestions when opening modal
+  document.getElementById('motiv-suggestions').classList.remove('show');
   openModal('item-modal-overlay');setTimeout(()=>document.getElementById('f-nome').focus(),120);
 }
 function editItem(id){
@@ -1266,6 +1545,8 @@ function editItem(id){
   document.getElementById('f-sc1').value=it.sc1||'';
   document.getElementById('f-sc2').value=it.sc2||'';
   document.getElementById('f-sc3').value=it.sc3||'';
+  document.getElementById('f-sc3full').checked=it.sc3Full||false;
+  document.getElementById('f-sc3').disabled=it.sc3Full||false;
   document.getElementById('f-motivo').value=it.motivo||'';
   document.getElementById('f-altrove').value=it.prezzoAltrove!==null&&it.prezzoAltrove!==undefined?it.prezzoAltrove:'';
   document.getElementById('f-dove').value=it.dove||'';
@@ -1280,6 +1561,7 @@ function saveItem(){
   const sc1=parseFloat(document.getElementById('f-sc1').value)||0;
   const sc2=parseFloat(document.getElementById('f-sc2').value)||0;
   const sc3=parseFloat(document.getElementById('f-sc3').value)||0;
+  const sc3Full=document.getElementById('f-sc3full').checked;
   const motivo=document.getElementById('f-motivo').value.trim();
   const av=document.getElementById('f-altrove').value;
   const prezzoAltrove=av!==''?parseFloat(av):null;
@@ -1289,8 +1571,8 @@ function saveItem(){
   let mo=S.years[S.currentYear]?.[S.currentMonth];
   if(!mo){S.years[S.currentYear]=S.years[S.currentYear]||{};S.years[S.currentYear][S.currentMonth]={name:MONTHS_IT[S.currentMonth-1]+' '+S.currentYear,items:[]};mo=S.years[S.currentYear][S.currentMonth];}
   const items=mo.items||[];
-  if(editId){const idx=items.findIndex(i=>i.id===editId);if(idx>=0)items[idx]={...items[idx],nome,prezzo,sc1,sc2,sc3,motivo,prezzoAltrove,dove,tipo,categoria};}
-  else items.push({id:uid(),nome,prezzo,sc1,sc2,sc3,motivo,prezzoAltrove,dove,tipo,categoria});
+  if(editId){const idx=items.findIndex(i=>i.id===editId);if(idx>=0)items[idx]={...items[idx],nome,prezzo,sc1,sc2,sc3,sc3Full,motivo,prezzoAltrove,dove,tipo,categoria};}
+  else items.push({id:uid(),nome,prezzo,sc1,sc2,sc3,sc3Full,motivo,prezzoAltrove,dove,tipo,categoria});
   mo.items=items;save();closeItemModal();render();toast(editId?'Aggiornato ✓':'Aggiunto ✓');
 }
 function delItem(id){
@@ -1356,7 +1638,7 @@ function resoItemRow(it){
     <td><div class="cell-ro">${catBadge}</div></td>
     ${ro(`<strong>${esc(it.nome)}</strong>`)}
     ${ro(`<span class="num">${eur(it.prezzo||0)}</span>`)}
-    ${ro(scEl(it.sc1))}${ro(scEl(it.sc2))}${ro(scEl(it.sc3))}
+    ${ro(scEl(it.sc1))}${ro(scEl(it.sc2))}${ro(creditoDisplay(it))}
     ${ro(`<span style="font-size:11px">${esc(it.motivo||'')}</span>`)}
     ${ro(`<strong class="num">${eur(tot)}</strong>`)}
     ${ro(altVal!==null?`<span class="num">${eur(altVal)}</span>`:`<span class="muted">—</span>`)}
@@ -1372,11 +1654,143 @@ function undoReso(id){
   it.reso=false;it.daRestituire=false;
   save();render();toast('Reso annullato ✓');
 }
+function toggleSelRow(id, checked){
+  if(checked) selectedIds.add(id); else selectedIds.delete(id);
+  const tr=document.querySelector(`tr[data-id="${id}"]`);
+  if(tr){if(checked)tr.classList.add('sel-row');else tr.classList.remove('sel-row');}
+  const allChecks=document.querySelectorAll('.sel-check');
+  const sa=document.getElementById('sel-all-check');
+  if(sa && allChecks.length>0){
+    const cnt=Array.from(allChecks).filter(c=>c.checked).length;
+    sa.checked=cnt===allChecks.length;
+    sa.indeterminate=cnt>0&&cnt<allChecks.length;
+  }
+  updateSumCard();
+}
+function toggleSelAll(checked){
+  document.querySelectorAll('.sel-check').forEach(c=>{
+    c.checked=checked;
+    const id=c.dataset.id;
+    if(checked)selectedIds.add(id);else selectedIds.delete(id);
+    const tr=document.querySelector(`tr[data-id="${id}"]`);
+    if(tr){if(checked)tr.classList.add('sel-row');else tr.classList.remove('sel-row');}
+  });
+  const sa=document.getElementById('sel-all-check');
+  if(sa)sa.indeterminate=false;
+  updateSumCard();
+}
+function clearSelection(){
+  selectedIds.clear();
+  document.querySelectorAll('.sel-check').forEach(c=>c.checked=false);
+  document.querySelectorAll('tr.sel-row').forEach(tr=>tr.classList.remove('sel-row'));
+  const sa=document.getElementById('sel-all-check');
+  if(sa){sa.checked=false;sa.indeterminate=false;}
+  updateSumCard();
+}
+function updateSumCard(){
+  const card=document.querySelector('.sum-card');if(!card)return;
+  const mo=S.years[S.currentYear]?.[S.currentMonth];
+  const allItems=(mo?.items||[]).filter(i=>i.nome?.trim());
+  const selItems=allItems.filter(i=>selectedIds.has(i.id));
+  const sumTot=selItems.reduce((a,i)=>a+totale(i),0);
+  const sumOrig=selItems.reduce((a,i)=>a+(i.prezzo||0),0);
+  const sum=selSumMode==='prezzo'?sumOrig:sumTot;
+  card.querySelector('.ic-val').textContent=selectedIds.size>0?eur(sum):'—';
+  // update secondary line
+  let sec=card.querySelector('.ic-secondary');
+  if(selectedIds.size>0){
+    if(!sec){sec=document.createElement('div');sec.className='ic-secondary';card.querySelector('.ic-val').after(sec);}
+    sec.textContent=selSumMode==='totale'?'💰 Prezzo orig.: '+eur(sumOrig):'✅ Tot. pagato: '+eur(sumTot);
+  } else if(sec){sec.remove();}
+  card.querySelector('.ic-sub').textContent=selectedIds.size>0
+    ?selectedIds.size+(selectedIds.size===1?' articolo selezionato':' articoli selezionati')
+    :'Seleziona righe dalla tabella';
+  const existing=card.querySelector('.ic-btn');
+  if(selectedIds.size>0&&!existing){
+    const btn=document.createElement('button');
+    btn.className='ic-btn';
+    btn.style.cssText='border-color:var(--orange-dark);color:var(--orange-dark)';
+    btn.textContent='✕ Deseleziona tutti';
+    btn.onclick=clearSelection;
+    card.querySelector('.ic-body').appendChild(btn);
+  } else if(selectedIds.size===0&&existing){existing.remove();}
+}
+
+function updateSc3Full(){
+  const chk=document.getElementById('f-sc3full');
+  const inp=document.getElementById('f-sc3');
+  inp.disabled=chk.checked;
+  if(chk.checked) inp.value='';
+  updateComputed();
+}
+// ── KEYBOARD NAVIGATION ──
+function getCellEl(id, field){
+  return document.querySelector(`.cell[data-id="${id}"][data-field="${field}"]`);
+}
+function setNavFocus(id, field){
+  document.querySelectorAll('.cell.nav-focused').forEach(el=>el.classList.remove('nav-focused'));
+  navFocus = (id && field) ? {id, field} : null;
+  if(navFocus){
+    const el=getCellEl(id,field);
+    if(el&&!el.classList.contains('editing')) el.classList.add('nav-focused');
+  }
+}
+function navMoveFocus(key){
+  if(!navFocus) return;
+  const rows=Array.from(document.querySelectorAll('tbody tr[data-id]'));
+  const rowIds=rows.map(tr=>tr.dataset.id);
+  const ri=rowIds.indexOf(navFocus.id), ci=NAV_FIELDS.indexOf(navFocus.field);
+  if(ri===-1||ci===-1) return;
+  let nr=ri, nc=ci;
+  if(key==='ArrowUp') nr=Math.max(0,ri-1);
+  else if(key==='ArrowDown') nr=Math.min(rows.length-1,ri+1);
+  else if(key==='ArrowLeft') nc=Math.max(0,ci-1);
+  else if(key==='ArrowRight') nc=Math.min(NAV_FIELDS.length-1,ci+1);
+  setNavFocus(rowIds[nr],NAV_FIELDS[nc]);
+  const el=getCellEl(rowIds[nr],NAV_FIELDS[nc]);
+  if(el) el.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+
+// ── SHIFT+CLICK RANGE SELECTION ──
+function handleSelCheck(event, id){
+  const checked=event.currentTarget.checked;
+  if(event.shiftKey && lastSelId && lastSelId!==id){
+    const rows=Array.from(document.querySelectorAll('tbody tr[data-id]'));
+    const ids=rows.map(r=>r.dataset.id);
+    const a=ids.indexOf(lastSelId), b=ids.indexOf(id);
+    if(a>-1&&b>-1){
+      const [lo,hi]=a<b?[a,b]:[b,a];
+      for(let i=lo;i<=hi;i++){
+        const rid=ids[i];
+        if(checked) selectedIds.add(rid); else selectedIds.delete(rid);
+        rows[i].classList.toggle('sel-row',checked);
+        const chk=rows[i].querySelector('.sel-check');
+        if(chk) chk.checked=checked;
+      }
+    }
+  } else {
+    if(checked) selectedIds.add(id); else selectedIds.delete(id);
+    const tr=document.querySelector(`tr[data-id="${id}"]`);
+    if(tr) tr.classList.toggle('sel-row',checked);
+  }
+  lastSelId=id;
+  const allChecks=document.querySelectorAll('.sel-check');
+  const sa=document.getElementById('sel-all-check');
+  if(sa&&allChecks.length>0){
+    const cnt=Array.from(allChecks).filter(c=>c.checked).length;
+    sa.checked=cnt===allChecks.length;
+    sa.indeterminate=cnt>0&&cnt<allChecks.length;
+  }
+  updateSumCard();
+}
+
 function updateComputed(){
   const p=parseFloat(document.getElementById('f-prezzo').value)||0;
   const s1=parseFloat(document.getElementById('f-sc1').value)||0;
   const s2=parseFloat(document.getElementById('f-sc2').value)||0;
-  const s3=parseFloat(document.getElementById('f-sc3').value)||0;
+  const sc3full=document.getElementById('f-sc3full')?.checked||false;
+  const base=Math.max(0,p-s1-s2);
+  const s3=sc3full?base:(parseFloat(document.getElementById('f-sc3').value)||0);
   const tot=Math.max(0,p-s1-s2-s3);
   const av=document.getElementById('f-altrove').value;
   const alt=av!==''?parseFloat(av):p;
@@ -1428,7 +1842,10 @@ function handleOvClick(e,id){if(e.target.id===id)closeModal(id);}
 // ── TOAST ──
 let _t;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),2400);}
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){['item-modal-overlay','cat-modal-overlay'].forEach(closeModal);closeStatsPage();}});
+// ── COPY MOTIVE TO CLIPBOARD ──
+
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){['item-modal-overlay','cat-modal-overlay'].forEach(closeModal);closeStatsPage();document.getElementById('motiv-suggestions').classList.remove('show');}});
 
 // ── STATS PAGE ──
 function openStatsPage(hl){
