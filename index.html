@@ -945,9 +945,8 @@ function getItem(id){
 
 // ── MATH ──
 function totale(it){
-  const base=Math.max(0,(it.prezzo||0)-(it.sc1||0)-(it.sc2||0));
   if(it.sc3Full) return 0;
-  return Math.max(0,base-(it.sc3||0));
+  return (it.prezzo||0)-(it.sc1||0)-(it.sc2||0)-(it.sc3||0);
 }
 function risparmio(it){
   const alt=(it.prezzoAltrove!==null&&it.prezzoAltrove!==undefined&&it.prezzoAltrove!=='')
@@ -1789,9 +1788,8 @@ function updateComputed(){
   const s1=parseFloat(document.getElementById('f-sc1').value)||0;
   const s2=parseFloat(document.getElementById('f-sc2').value)||0;
   const sc3full=document.getElementById('f-sc3full')?.checked||false;
-  const base=Math.max(0,p-s1-s2);
-  const s3=sc3full?base:(parseFloat(document.getElementById('f-sc3').value)||0);
-  const tot=Math.max(0,p-s1-s2-s3);
+  const s3=sc3full?Math.max(0,p-s1-s2):(parseFloat(document.getElementById('f-sc3').value)||0);
+  const tot=sc3full?0:p-s1-s2-s3;
   const av=document.getElementById('f-altrove').value;
   const alt=av!==''?parseFloat(av):p;
   const risp=alt-tot;
